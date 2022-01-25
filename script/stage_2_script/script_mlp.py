@@ -1,11 +1,12 @@
 import sys
-sys.path.append("/content/drive/MyDrive/UCD courses/ECS189G/ECS189G_project")
+#sys.path.append("/content/ECS189G_project") #use in colab only
 from codes.stage_2_code.Dataset_Loader import Dataset_Loader
 from codes.stage_2_code.Method_MLP import Method_MLP
 from codes.stage_2_code.Result_Saver import Result_Saver
 from codes.stage_2_code.Setting_KFold_CV import Setting_KFold_CV
 from codes.stage_2_code.Setting_Train_Test_Split import Setting_Train_Test_Split
 from codes.stage_2_code.Evaluate_Accuracy import Evaluate_Accuracy
+from codes.stage_2_code.Evaluate_Classification import Evaluate_Classification
 import numpy as np
 import torch
 
