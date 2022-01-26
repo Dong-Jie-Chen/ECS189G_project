@@ -1,3 +1,5 @@
+import sys
+#sys.path.append("/content/ECS189G_project") #use in colab only
 from codes.stage_2_code.Result_Loader import Result_Loader
 from codes.stage_2_code.Evaluate_Accuracy import Evaluate_Accuracy
 from codes.stage_2_code.Evaluate_Classification import Evaluate_Classification
