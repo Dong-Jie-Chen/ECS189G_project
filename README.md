@@ -4,11 +4,9 @@
 ```shell script
 git clone https://github.com/Dong-Jie-Chen/ECS189G_project
 ```
-### Step 2: Using git lfs to load the data
-```shell script
-cd ECS189G_project
-git lfs pull
-```
+### Step 2: Load the data
+put train.csv and test.csv into data/stage_2_data
+
 ### Step 3: Training (skip this if you only want to see the results)
 
 ```shell script
@@ -24,13 +22,10 @@ python script/stage_2_script/script_load_result.py
 ```shell script
 !git clone https://github.com/Dong-Jie-Chen/ECS189G_project
 ```
-### Step 2: Using git lfs to load the data
 
-```shell script
-!sudo apt-get install git-lfs
-%cd ECS189G_project
-!git lfs pull
-```
+### Step 2: Load the data
+put train.csv and test.csv into data/stage_2_data
+
 
 ### Step 3: Training (skip this if you only want to see the results)
 uncomment the second line of script_mlp.py
