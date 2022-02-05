@@ -31,13 +31,24 @@ class Dataset_Loader(dataset):
             y_train = [d['label'] for d in data['train']]
             X_test = [[d['image']] for d in data['test']]
             y_test = [d['label'] for d in data['test']]
-        elif self.dataset_source_file_name in ["CIFAR", "ORL"]:
+        elif self.dataset_source_file_name in ["CIFAR"]:
             X_train = np.array([d['image'] for d in data['train']])
-            y_train = np.array([d['label'] for d in data['train']]) - 1
+            y_train = np.array([d['label'] for d in data['train']])
             X_test = np.array([d['image'] for d in data['test']])
-            y_test = np.array([d['label'] for d in data['test']]) - 1
+            y_test = np.array([d['label'] for d in data['test']])
+            X_train = X_train / 255
+            X_test = X_test / 255
             X_train = np.transpose(X_train, (0, 3, 1, 2))
             X_test = np.transpose(X_test, (0, 3, 1, 2))
+        elif self.dataset_source_file_name == "ORL":
+            X_train = np.array([d['image'] for d in data['train']])
+            y_train = np.array([d['label'] for d in data['train']])
+            X_test = np.array([d['image'] for d in data['test']])
+            y_test = np.array([d['label'] for d in data['test']])
+            X_train = np.transpose(X_train, (0, 3, 1, 2))
+            X_test = np.transpose(X_test, (0, 3, 1, 2))
+            y_train = y_train - 1
+            y_test = y_test - 1
         return X_train, X_test, y_train, y_test
 
     def create_mini_batches(method_n, X, y, batch_size):

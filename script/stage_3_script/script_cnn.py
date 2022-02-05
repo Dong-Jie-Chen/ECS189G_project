@@ -11,7 +11,7 @@ from codes.stage_3_code.Evaluate_Classification import Evaluate_Classification
 import numpy as np
 import torch
 
-dataset = "ORL"  #"CIFAR" "MNIST" "ORL"
+dataset = "CIFAR"  #"CIFAR" "MNIST" "ORL"
 # ---- CNN script ----
 if dataset == "MNIST":
     # ---- parameter section -------------------------------
