@@ -47,7 +47,7 @@ class Method_CNN_MNIST(method, nn.Module):
         h = self.activation_func_1(self.conv_layer_1(x))
         h = nn.ReLU().to(self.device)(self.conv_layer_2(h))
         h = nn.ReLU().to(self.device)(self.conv_layer_3(h))
-        h = h.view(-1, 16*16*64)
+        h = torch.flatten(h, 1)
         h = nn.ReLU().to(self.device)(self.fc_layer_1(h))
         # outout layer result
         # self.fc_layer_2(h) will be a nx2 tensor
@@ -68,7 +68,7 @@ class Method_CNN_MNIST(method, nn.Module):
         loss_function = nn.CrossEntropyLoss().to(self.device)
         # for training accuracy investigation purpose
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
-        mini_batches = self.create_mini_batches("MNIST", X, y, self.batch_size)
+        mini_batches = Dataset_Loader.create_mini_batches("MNIST", X, y, self.batch_size)
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
@@ -76,8 +76,7 @@ class Method_CNN_MNIST(method, nn.Module):
 
             for mini_batch in mini_batches:
                 X, y = mini_batch
-                X = torch.FloatTensor(np.array(X)).to(self.device)
-                y = torch.LongTensor(np.array(y)).to(self.device)
+
                 optimizer.zero_grad()
                 # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
                 y_pred = self.forward(X)

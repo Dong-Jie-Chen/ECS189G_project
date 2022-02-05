@@ -8,6 +8,7 @@ Concrete IO class for a specific dataset
 from codes.base_class.dataset import dataset
 import pickle
 import numpy as np
+import torch
 
 class Dataset_Loader(dataset):
     data = None
@@ -25,12 +26,12 @@ class Dataset_Loader(dataset):
         data = pickle.load(f)
         f.close()
         print('training set size:', len(data['train']), 'testing set size:', len(data['test']))
-        if self.dataset_source_file_name == "MNIST":
+        if self.dataset_source_file_name in ["MNIST"]:
             X_train = [[d['image']] for d in data['train']]
             y_train = [d['label'] for d in data['train']]
             X_test = [[d['image']] for d in data['test']]
             y_test = [d['label'] for d in data['test']]
-        elif self.dataset_source_file_name == "CIFAR":
+        elif self.dataset_source_file_name in ["CIFAR", "ORL"]:
             X_train = [d['image'] for d in data['train']]
             y_train = [d['label'] for d in data['train']]
             X_test = [d['image'] for d in data['test']]
@@ -38,9 +39,12 @@ class Dataset_Loader(dataset):
         return X_train, X_test, y_train, y_test
 
     def create_mini_batches(method_n, X, y, batch_size):
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         X, y = np.array(X), np.array(y)
-        if method_n == "CIFAR":
+        if method_n in ["CIFAR", "ORL"]:
             X = np.transpose(X, (0, 3, 1, 2))
+        if method_n == "ORL":
+            y = y-1
         index = np.arange(X.shape[0])
         np.random.shuffle(index)
         n_minibatches = X.shape[0] // batch_size + 1
@@ -50,11 +54,15 @@ class Dataset_Loader(dataset):
         for i in range(n_minibatches):
             X_mini = X[index[i * batch_size:(i + 1) * batch_size]]
             Y_mini = y[index[i * batch_size:(i + 1) * batch_size]]
+            X_mini = torch.FloatTensor(np.array(X_mini)).to(device)
+            Y_mini = torch.LongTensor(np.array(Y_mini)).to(device)
             mini_batches.append((X_mini, Y_mini))
         if res_flag:
             n_minibatches += 1
             X_mini = X[index[i * batch_size:index.shape[0]]]
             Y_mini = y[index[i * batch_size:index.shape[0]]]
+            X_mini = torch.FloatTensor(np.array(X_mini)).to(device)
+            Y_mini = torch.LongTensor(np.array(Y_mini)).to(device)
             mini_batches.append((X_mini, Y_mini))
 
         return mini_batches

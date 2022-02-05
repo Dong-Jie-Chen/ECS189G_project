@@ -13,14 +13,14 @@ from torch import nn
 import numpy as np
 
 
-class Method_CNN_CIFAR(method, nn.Module):
+class Method_CNN_ORL(method, nn.Module):
     data = None
     # it defines the max rounds to train the model
     max_epoch = 500
     # it defines the learning rate for gradient descent based optimizer for model learning
     learning_rate = 1e-3
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    batch_size = 128
+    batch_size = 16
     # it defines the the MLP model architecture, e.g.,
     # how many layers, size of variables in each layer, activation function, etc.
     # the size of the input/output portal of the model architecture should be consistent with our data input and desired output
@@ -33,8 +33,8 @@ class Method_CNN_CIFAR(method, nn.Module):
         self.activation_func_1 = nn.ReLU().to(self.device)
         self.conv_layer_2 = nn.Conv2d(32, 32, 5, 1).to(self.device)
         self.conv_layer_3 = nn.Conv2d(32, 64, 5, 1).to(self.device)
-        self.fc_layer_1 = nn.Linear(20*20*64, 128).to(self.device)
-        self.fc_layer_2 = nn.Linear(128, 10).to(self.device)
+        self.fc_layer_1 = nn.Linear(21*16*64, 128).to(self.device)
+        self.fc_layer_2 = nn.Linear(128, 40).to(self.device)
         # check here for nn.Softmax doc: https://pytorch.org/docs/stable/generated/torch.nn.Softmax.html
         self.activation_func_2 = nn.LogSoftmax(dim=1).to(self.device)
 
@@ -45,7 +45,9 @@ class Method_CNN_CIFAR(method, nn.Module):
         '''Forward propagation'''
         # hidden layer embeddings
         h = self.activation_func_1(self.conv_layer_1(x))
+        h = nn.MaxPool2d(2).to(self.device)(h)
         h = nn.ReLU().to(self.device)(self.conv_layer_2(h))
+        h = nn.MaxPool2d(2).to(self.device)(h)
         h = nn.ReLU().to(self.device)(self.conv_layer_3(h))
         h = torch.flatten(h, 1)
         h = nn.ReLU().to(self.device)(self.fc_layer_1(h))
@@ -68,7 +70,8 @@ class Method_CNN_CIFAR(method, nn.Module):
         loss_function = nn.CrossEntropyLoss().to(self.device)
         # for training accuracy investigation purpose
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
-        mini_batches = Dataset_Loader.create_mini_batches("CIFAR", X, y, self.batch_size)
+        mini_batches = Dataset_Loader.create_mini_batches("ORL", X, y, self.batch_size)
+
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
@@ -76,7 +79,6 @@ class Method_CNN_CIFAR(method, nn.Module):
 
             for mini_batch in mini_batches:
                 X, y = mini_batch
-
                 optimizer.zero_grad()
                 # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
                 y_pred = self.forward(X)
@@ -92,7 +94,7 @@ class Method_CNN_CIFAR(method, nn.Module):
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
 
-            if epoch%50 == 0:
+            if epoch%5 == 0:
                 accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
                 print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', train_loss.item())
     
