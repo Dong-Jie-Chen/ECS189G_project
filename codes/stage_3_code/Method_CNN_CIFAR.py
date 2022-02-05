@@ -13,7 +13,7 @@ from torch import nn
 import numpy as np
 
 
-class Method_CNN(method, nn.Module):
+class Method_CNN_CIFAR(method, nn.Module):
     data = None
     # it defines the max rounds to train the model
     max_epoch = 500
@@ -28,12 +28,12 @@ class Method_CNN(method, nn.Module):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
         # check here for nn.Linear doc: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
-        self.conv_layer_1 = nn.Conv2d(1, 32, 5, 1).to(self.device)
+        self.conv_layer_1 = nn.Conv2d(3, 32, 5, 1).to(self.device)
         # check here for nn.ReLU doc: https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html
         self.activation_func_1 = nn.ReLU().to(self.device)
         self.conv_layer_2 = nn.Conv2d(32, 32, 5, 1).to(self.device)
         self.conv_layer_3 = nn.Conv2d(32, 64, 5, 1).to(self.device)
-        self.fc_layer_1 = nn.Linear(16*16*64, 128).to(self.device)
+        self.fc_layer_1 = nn.Linear(20*20*64, 128).to(self.device)
         self.fc_layer_2 = nn.Linear(128, 10).to(self.device)
         # check here for nn.Softmax doc: https://pytorch.org/docs/stable/generated/torch.nn.Softmax.html
         self.activation_func_2 = nn.LogSoftmax(dim=1).to(self.device)
@@ -47,7 +47,7 @@ class Method_CNN(method, nn.Module):
         h = self.activation_func_1(self.conv_layer_1(x))
         h = nn.ReLU().to(self.device)(self.conv_layer_2(h))
         h = nn.ReLU().to(self.device)(self.conv_layer_3(h))
-        h = h.view(-1, 16*16*64)
+        h = h.view(-1, 20*20*64)
         h = nn.ReLU().to(self.device)(self.fc_layer_1(h))
         # outout layer result
         # self.fc_layer_2(h) will be a nx2 tensor
@@ -68,12 +68,12 @@ class Method_CNN(method, nn.Module):
         loss_function = nn.CrossEntropyLoss().to(self.device)
         # for training accuracy investigation purpose
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
-
+        mini_batches = Dataset_Loader.create_mini_batches("CIFAR", X, y, self.batch_size)
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
         for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
-            mini_batches = Dataset_Loader.create_mini_batches(X, y, self.batch_size)
+
             for mini_batch in mini_batches:
                 X, y = mini_batch
                 X = torch.FloatTensor(np.array(X)).to(self.device)

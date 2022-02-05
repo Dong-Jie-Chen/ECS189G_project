@@ -25,14 +25,22 @@ class Dataset_Loader(dataset):
         data = pickle.load(f)
         f.close()
         print('training set size:', len(data['train']), 'testing set size:', len(data['test']))
-        X_train = [[d['image']] for d in data['train']]
-        y_train = [d['label'] for d in data['train']]
-        X_test = [[d['image']] for d in data['test']]
-        y_test = [d['label'] for d in data['test']]
+        if self.dataset_source_file_name == "MNIST":
+            X_train = [[d['image']] for d in data['train']]
+            y_train = [d['label'] for d in data['train']]
+            X_test = [[d['image']] for d in data['test']]
+            y_test = [d['label'] for d in data['test']]
+        elif self.dataset_source_file_name == "CIFAR":
+            X_train = [d['image'] for d in data['train']]
+            y_train = [d['label'] for d in data['train']]
+            X_test = [d['image'] for d in data['test']]
+            y_test = [d['label'] for d in data['test']]
         return X_train, X_test, y_train, y_test
 
-    def create_mini_batches(X, y, batch_size):
+    def create_mini_batches(method_n, X, y, batch_size):
         X, y = np.array(X), np.array(y)
+        if method_n == "CIFAR":
+            X = np.transpose(X, (0, 3, 1, 2))
         index = np.arange(X.shape[0])
         np.random.shuffle(index)
         n_minibatches = X.shape[0] // batch_size + 1
@@ -49,5 +57,4 @@ class Dataset_Loader(dataset):
             Y_mini = y[index[i * batch_size:index.shape[0]]]
             mini_batches.append((X_mini, Y_mini))
 
-        print(n_minibatches)
         return mini_batches
