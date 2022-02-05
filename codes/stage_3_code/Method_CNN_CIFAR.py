@@ -47,7 +47,7 @@ class Method_CNN_CIFAR(method, nn.Module):
         h = self.activation_func_1(self.conv_layer_1(x))
         h = nn.ReLU().to(self.device)(self.conv_layer_2(h))
         h = nn.ReLU().to(self.device)(self.conv_layer_3(h))
-        h = h.view(-1, 20*20*64)
+        h = torch.flatten(h, 1)
         h = nn.ReLU().to(self.device)(self.fc_layer_1(h))
         # outout layer result
         # self.fc_layer_2(h) will be a nx2 tensor
