@@ -32,19 +32,17 @@ class Dataset_Loader(dataset):
             X_test = [[d['image']] for d in data['test']]
             y_test = [d['label'] for d in data['test']]
         elif self.dataset_source_file_name in ["CIFAR", "ORL"]:
-            X_train = [d['image'] for d in data['train']]
-            y_train = [d['label'] for d in data['train']]
-            X_test = [d['image'] for d in data['test']]
-            y_test = [d['label'] for d in data['test']]
+            X_train = np.array([d['image'] for d in data['train']])
+            y_train = np.array([d['label'] for d in data['train']]) - 1
+            X_test = np.array([d['image'] for d in data['test']])
+            y_test = np.array([d['label'] for d in data['test']]) - 1
+            X_train = np.transpose(X_train, (0, 3, 1, 2))
+            X_test = np.transpose(X_test, (0, 3, 1, 2))
         return X_train, X_test, y_train, y_test
 
     def create_mini_batches(method_n, X, y, batch_size):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        X, y = np.array(X), np.array(y)
-        if method_n in ["CIFAR", "ORL"]:
-            X = np.transpose(X, (0, 3, 1, 2))
-        if method_n == "ORL":
-            y = y-1
+
         index = np.arange(X.shape[0])
         np.random.shuffle(index)
         n_minibatches = X.shape[0] // batch_size + 1
