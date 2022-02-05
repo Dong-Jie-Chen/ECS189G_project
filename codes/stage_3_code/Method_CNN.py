@@ -33,7 +33,7 @@ class Method_CNN(method, nn.Module):
         self.activation_func_1 = nn.ReLU().to(self.device)
         self.conv_layer_2 = nn.Conv2d(32, 32, 5, 1).to(self.device)
         self.conv_layer_3 = nn.Conv2d(32, 64, 5, 1).to(self.device)
-        self.fc_layer_1 = nn.Linear(3*3*64, 128).to(self.device)
+        self.fc_layer_1 = nn.Linear(16*16*64, 128).to(self.device)
         self.fc_layer_2 = nn.Linear(128, 10).to(self.device)
         # check here for nn.Softmax doc: https://pytorch.org/docs/stable/generated/torch.nn.Softmax.html
         self.activation_func_2 = nn.LogSoftmax(dim=1).to(self.device)
@@ -47,7 +47,7 @@ class Method_CNN(method, nn.Module):
         h = self.activation_func_1(self.conv_layer_1(x))
         h = nn.ReLU().to(self.device)(self.conv_layer_2(h))
         h = nn.ReLU().to(self.device)(self.conv_layer_3(h))
-        h = h.view(-1, 3*3*64)
+        h = h.view(-1, 16*16*64)
         h = nn.ReLU().to(self.device)(self.fc_layer_1(h))
         # outout layer result
         # self.fc_layer_2(h) will be a nx2 tensor
