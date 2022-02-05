@@ -7,6 +7,7 @@ Concrete MethodModule class for a specific learning MethodModule
 
 from codes.base_class.method import method
 from codes.stage_3_code.Evaluate_Accuracy import Evaluate_Accuracy
+from codes.stage_3_code.Dataset_Loader import Dataset_Loader
 import torch
 from torch import nn
 import numpy as np
@@ -19,6 +20,7 @@ class Method_CNN(method, nn.Module):
     # it defines the learning rate for gradient descent based optimizer for model learning
     learning_rate = 1e-3
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    batch_size = 128
     # it defines the the MLP model architecture, e.g.,
     # how many layers, size of variables in each layer, activation function, etc.
     # the size of the input/output portal of the model architecture should be consistent with our data input and desired output
@@ -66,26 +68,30 @@ class Method_CNN(method, nn.Module):
         loss_function = nn.CrossEntropyLoss().to(self.device)
         # for training accuracy investigation purpose
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
-        X = torch.FloatTensor(np.array(X)).to(self.device)
-        y = torch.LongTensor(np.array(y)).to(self.device)
+
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
         for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
-            optimizer.zero_grad()
-            # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
-            y_pred = self.forward(X)
-            # convert y to torch.tensor as well
-            y_true = y
-            # calculate the training loss
-            train_loss = loss_function(y_pred, y_true)
+            mini_batches = Dataset_Loader.create_mini_batches(X, y, self.batch_size)
+            for mini_batch in mini_batches:
+                X, y = mini_batch
+                X = torch.FloatTensor(np.array(X)).to(self.device)
+                y = torch.LongTensor(np.array(y)).to(self.device)
+                optimizer.zero_grad()
+                # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
+                y_pred = self.forward(X)
+                # convert y to torch.tensor as well
+                y_true = y
+                # calculate the training loss
+                train_loss = loss_function(y_pred, y_true)
 
-            # check here for the loss.backward doc: https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html
-            # do the error backpropagation to calculate the gradients
-            train_loss.backward()
-            # check here for the opti.step doc: https://pytorch.org/docs/stable/optim.html
-            # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
-            optimizer.step()
+                # check here for the loss.backward doc: https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html
+                # do the error backpropagation to calculate the gradients
+                train_loss.backward()
+                # check here for the opti.step doc: https://pytorch.org/docs/stable/optim.html
+                # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
+                optimizer.step()
 
             if epoch%50 == 0:
                 accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
