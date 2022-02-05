@@ -10,20 +10,15 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 
 class Setting_Train_Test_Split(setting):
-    fold = 3
 
     def print_setup_summary(self):
-        print('dataset:', self.dataset['train'].dataset_name, ', method:', self.method.method_name,
+        print('dataset:', self.dataset.dataset_name, ', method:', self.method.method_name,
               ', setting:', self.setting_name, ', result:', self.result.result_name, ', evaluation:', self.evaluate.evaluate_name)
 
     def load_run_save_evaluate(self):
         
         # load dataset
-        train_data = self.dataset['train'].load()
-        test_data = self.dataset['test'].load()
-
-
-        X_train, X_test, y_train, y_test = train_data['X'], test_data['X'], train_data['y'], test_data['y']
+        X_train, X_test, y_train, y_test = self.dataset.load()
 
         print("Training set:", np.array(X_train).shape)
         print("Testing set:", np.array(X_test).shape)

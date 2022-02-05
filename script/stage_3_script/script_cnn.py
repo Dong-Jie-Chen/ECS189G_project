@@ -19,15 +19,11 @@ if dataset == "MNIST":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('device: ', device)
     # ---- objection initialization setction ---------------
-    train_data_obj = Dataset_Loader('train', '')
-    train_data_obj.dataset_source_folder_path = '../../data/stage_2_data/'
-    train_data_obj.dataset_source_file_name = 'train.csv'
-    test_data_obj = Dataset_Loader('test', '')
-    test_data_obj.dataset_source_folder_path = '../../data/stage_2_data/'
-    test_data_obj.dataset_source_file_name = 'test.csv'
-    data_obj = {'train': train_data_obj, 'test': test_data_obj}
+    data_obj = Dataset_Loader('MNIST', '')
+    data_obj.dataset_source_folder_path = '../../data/stage_3_data/'
+    data_obj.dataset_source_file_name = 'MNIST'
 
-    method_obj = Method_CNN('multi-layer perceptron', '')
+    method_obj = Method_CNN('CNN', '')
 
     result_obj = Result_Saver('saver', '')
     result_obj.result_destination_folder_path = '../../result/stage_2_result/MLP_'
@@ -45,7 +41,7 @@ if dataset == "MNIST":
     setting_obj.print_setup_summary()
     mean_score, std_score = setting_obj.load_run_save_evaluate()
     print('************ Overall Performance ************')
-    print('MLP Accuracy: ' + str(mean_score) + ' +/- ' + str(std_score))
+    print('CNN Accuracy: ' + str(mean_score) + ' +/- ' + str(std_score))
     print('************ Finish ************')
     # ------------------------------------------------------
 

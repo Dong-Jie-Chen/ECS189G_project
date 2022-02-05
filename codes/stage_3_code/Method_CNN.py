@@ -6,7 +6,7 @@ Concrete MethodModule class for a specific learning MethodModule
 # License: TBD
 
 from codes.base_class.method import method
-from codes.stage_2_code.Evaluate_Accuracy import Evaluate_Accuracy
+from codes.stage_3_code.Evaluate_Accuracy import Evaluate_Accuracy
 import torch
 from torch import nn
 import numpy as np
@@ -26,14 +26,15 @@ class Method_CNN(method, nn.Module):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
         # check here for nn.Linear doc: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
-        self.fc_layer_1 = nn.Linear(784, 256).to(self.device)
+        self.conv_layer_1 = nn.Conv2d(1, 32, 5, 1).to(self.device)
         # check here for nn.ReLU doc: https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html
         self.activation_func_1 = nn.ReLU().to(self.device)
-        self.fc_layer_2 = nn.Linear(256, 128).to(self.device)
-        self.fc_layer_3 = nn.Linear(128, 128).to(self.device)
-        self.fc_layer_4 = nn.Linear(128, 10).to(self.device)
+        self.conv_layer_2 = nn.Conv2d(32, 32, 5, 1).to(self.device)
+        self.conv_layer_3 = nn.Conv2d(32, 64, 5, 1).to(self.device)
+        self.fc_layer_1 = nn.Linear(3*3*64, 128).to(self.device)
+        self.fc_layer_2 = nn.Linear(128, 10).to(self.device)
         # check here for nn.Softmax doc: https://pytorch.org/docs/stable/generated/torch.nn.Softmax.html
-        self.activation_func_2 = nn.Softmax(dim=1).to(self.device)
+        self.activation_func_2 = nn.LogSoftmax(dim=1).to(self.device)
 
     # it defines the forward propagation function for input x
     # this function will calculate the output layer by layer
@@ -41,14 +42,16 @@ class Method_CNN(method, nn.Module):
     def forward(self, x):
         '''Forward propagation'''
         # hidden layer embeddings
-        h = self.activation_func_1(self.fc_layer_1(x))
-        h = nn.ReLU().to(self.device)(self.fc_layer_2(h))
-        h = nn.ReLU().to(self.device)(self.fc_layer_3(h))
+        h = self.activation_func_1(self.conv_layer_1(x))
+        h = nn.ReLU().to(self.device)(self.conv_layer_2(h))
+        h = nn.ReLU().to(self.device)(self.conv_layer_3(h))
+        h = h.view(-1, 3*3*64)
+        h = nn.ReLU().to(self.device)(self.fc_layer_1(h))
         # outout layer result
         # self.fc_layer_2(h) will be a nx2 tensor
         # n (denotes the input instance number): 0th dimension; 2 (denotes the class number): 1st dimension
         # we do softmax along dim=1 to get the normalized classification probability distributions for each instance
-        y_pred = self.activation_func_2(self.fc_layer_4(h))
+        y_pred = self.activation_func_2(self.fc_layer_2(h))
         return y_pred
 
     # backward error propagation will be implemented by pytorch automatically

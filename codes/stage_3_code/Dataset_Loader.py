@@ -6,7 +6,7 @@ Concrete IO class for a specific dataset
 # License: TBD
 
 from codes.base_class.dataset import dataset
-
+import pickle
 
 class Dataset_Loader(dataset):
     data = None
@@ -20,11 +20,12 @@ class Dataset_Loader(dataset):
         print('loading data...')
         X = []
         y = []
-        f = open(self.dataset_source_folder_path + self.dataset_source_file_name, 'r')
-        for line in f:
-            line = line.strip('\n')
-            elements = [int(i) for i in line.split(',')]
-            X.append(elements[1:])
-            y.append(elements[0])
+        f = open(self.dataset_source_folder_path + self.dataset_source_file_name, 'rb')
+        data = pickle.load(f)
         f.close()
-        return {'X': X, 'y': y}
+        print('training set size:', len(data['train']), 'testing set size:', len(data['test']))
+        X_train = [[d['image']] for d in data['train']]
+        y_train = [d['label'] for d in data['train']]
+        X_test = [[d['image']] for d in data['test']]
+        y_test = [d['label'] for d in data['test']]
+        return X_train, X_test, y_train, y_test
