@@ -51,12 +51,13 @@ class Dataset_Loader(dataset):
             y_test = y_test - 1
         return X_train, X_test, y_train, y_test
 
-    def create_mini_batches(method_n, X, y, batch_size):
+    def create_mini_batches(method_n, X, y, batch_size, shuffle=True):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         index = np.arange(X.shape[0])
-        np.random.shuffle(index)
-        n_minibatches = X.shape[0] // batch_size + 1
+        if shuffle:
+          np.random.shuffle(index)
+        n_minibatches = X.shape[0] // batch_size
         res_flag = (X.shape[0] % batch_size) > 0
         i = 0
         mini_batches = []
@@ -67,7 +68,7 @@ class Dataset_Loader(dataset):
             Y_mini = torch.LongTensor(np.array(Y_mini))
             mini_batches.append((X_mini, Y_mini))
         if res_flag:
-            n_minibatches += 1
+            i += 1
             X_mini = X[index[i * batch_size:index.shape[0]]]
             Y_mini = y[index[i * batch_size:index.shape[0]]]
             X_mini = torch.FloatTensor(np.array(X_mini))

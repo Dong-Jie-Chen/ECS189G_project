@@ -75,7 +75,7 @@ class Method_CNN_ORL(method, nn.Module):
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
-        for epoch in range(self.max_epoch + 1): # you can do an early stop if self.max_epoch is too much...
+        for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
 
             for mini_batch in mini_batches:
                 X, y = mini_batch
@@ -95,10 +95,10 @@ class Method_CNN_ORL(method, nn.Module):
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
 
-            if epoch%5 == 0:
+            if (epoch-1)%5 == 0:
                 accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
                 print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', train_loss.item())
-            if epoch%5 == 0:
+            if (epoch-1)%5 == 0:
                 pred_y = self.test(self.data['test']['X'])
                 accuracy_evaluator.data = {'pred_y': pred_y.cpu(), 'true_y': self.data['test']['y']}
                 print('Epoch:', epoch, 'Test Accuracy:', accuracy_evaluator.evaluate(), 'Test Loss:', train_loss.item())

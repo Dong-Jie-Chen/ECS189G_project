@@ -5,7 +5,7 @@ from codes.stage_3_code.Evaluate_Accuracy import Evaluate_Accuracy
 from codes.stage_3_code.Evaluate_Classification import Evaluate_Classification
 if 1:
     result_obj = Result_Loader('saver', '')
-    result_obj.result_destination_folder_path = '../../result/stage_3_result/MLP_'
+    result_obj.result_destination_folder_path = '../../result/stage_3_result/CNN_ORL_'
     result_obj.result_destination_file_name = 'prediction_result'
 
     result_obj.load()
@@ -19,6 +19,6 @@ if 1:
     evaluate_obj_1.data = result_obj.data
     c_report = evaluate_obj_1.evaluate()
     print('************ Overall Performance ************')
-    print('MLP Accuracy: ' + str(mean_score))
-    print('MLP Classification Report: \n' + c_report)
+    print('CNN Accuracy: ' + str(mean_score))
+    print('CNN Classification Report: \n' + c_report)
     print('************ Finish ************')

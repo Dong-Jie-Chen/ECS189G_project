@@ -16,31 +16,34 @@ import numpy as np
 class Method_CNN_CIFAR(method, nn.Module):
     data = None
     # it defines the max rounds to train the model
-    max_epoch = 25
+    max_epoch = 100
     # it defines the learning rate for gradient descent based optimizer for model learning
     learning_rate = 1e-3
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    batch_size = 128
+    batch_size = 32
     # it defines the the MLP model architecture, e.g.,
     # how many layers, size of variables in each layer, activation function, etc.
     # the size of the input/output portal of the model architecture should be consistent with our data input and desired output
     def __init__(self, mName, mDescription):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
-        # check here for nn.Linear doc: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
-        self.conv_layer_1 = nn.Conv2d(3, 32, 5, 1).to(self.device)
-        # check here for nn.ReLU doc: https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html
-        self.activation_func_1 = nn.ReLU().to(self.device)
-        self.conv_layer_2 = nn.Conv2d(32, 32, 5, 1).to(self.device)
-        self.conv_layer_3 = nn.Conv2d(32, 64, 5, 1).to(self.device)
-        self.res_block_1 = nn.Sequential(nn.Conv2d(32, 32, 5, 1, 2), nn.BatchNorm2d(32), nn.ReLU(), \
-                                        nn.Conv2d(32, 32, 5, 1, 2), nn.BatchNorm2d(32), nn.ReLU()).to(self.device)
-        self.res_block_2 = nn.Sequential(nn.Conv2d(32, 32, 5, 1, 2), nn.BatchNorm2d(32), nn.ReLU(), \
-                                        nn.Conv2d(32, 32, 5, 1, 2), nn.BatchNorm2d(32), nn.ReLU()).to(self.device)
-        self.fc_layer_1 = nn.Linear(20*20*64, 128).to(self.device)
-        self.fc_layer_2 = nn.Linear(128, 10).to(self.device)
+        self.conv_BN_ReLU_1 = nn.Sequential(nn.Conv2d(3, 64, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(64), nn.Dropout2d(0.3)).to(self.device)
+        self.conv_BN_ReLU_2 = nn.Sequential(nn.Conv2d(64, 64, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(64)).to(self.device)
+        self.conv_BN_ReLU_3 = nn.Sequential(nn.Conv2d(64, 128, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(128), nn.Dropout2d(0.4)).to(self.device)
+        self.conv_BN_ReLU_4 = nn.Sequential(nn.Conv2d(128, 128, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(128)).to(self.device)
+        self.conv_BN_ReLU_5 = nn.Sequential(nn.Conv2d(128, 256, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(256), nn.Dropout2d(0.4)).to(self.device)
+        self.conv_BN_ReLU_6 = nn.Sequential(nn.Conv2d(256, 256, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(256), nn.Dropout2d(0.4)).to(self.device)
+        self.conv_BN_ReLU_7 = nn.Sequential(nn.Conv2d(256, 256, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(256)).to(self.device)
+        self.conv_BN_ReLU_8 = nn.Sequential(nn.Conv2d(256, 512, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(512), nn.Dropout2d(0.4)).to(self.device)
+        self.conv_BN_ReLU_9 = nn.Sequential(nn.Conv2d(512, 512, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(512), nn.Dropout2d(0.4)).to(self.device)
+        self.conv_BN_ReLU_10 = nn.Sequential(nn.Conv2d(512, 512, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(512)).to(self.device)
+        self.conv_BN_ReLU_11 = nn.Sequential(nn.Conv2d(512, 512, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(512), nn.Dropout2d(0.4)).to(self.device)
+        self.conv_BN_ReLU_12 = nn.Sequential(nn.Conv2d(512, 512, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(512), nn.Dropout2d(0.4)).to(self.device)
+        self.conv_BN_ReLU_13 = nn.Sequential(nn.Conv2d(512, 512, 3, 1, 1), nn.ReLU(), nn.BatchNorm2d(512)).to(self.device)
+        self.fc_layer_1 = nn.Sequential(nn.Linear(1*1*512, 512), nn.ReLU(), nn.BatchNorm1d(512), nn.Dropout(0.5)).to(self.device)
+        self.fc_layer_2 = nn.Linear(512, 10).to(self.device)
         # check here for nn.Softmax doc: https://pytorch.org/docs/stable/generated/torch.nn.Softmax.html
-        self.activation_func_2 = nn.LogSoftmax(dim=1).to(self.device)
+        self.activation_func_last = nn.LogSoftmax(dim=1).to(self.device)
 
     # it defines the forward propagation function for input x
     # this function will calculate the output layer by layer
@@ -48,26 +51,31 @@ class Method_CNN_CIFAR(method, nn.Module):
     def forward(self, x):
         '''Forward propagation'''
         # hidden layer embeddings
-        h = self.conv_layer_1(x)
-        h = nn.BatchNorm2d(32).to(self.device)(h)
-        h = self.activation_func_1(h)
-        h = self.res_block_1(h) + h
-        h = self.conv_layer_2(h)
-        h = nn.BatchNorm2d(32).to(self.device)(h)
-        h = nn.ReLU().to(self.device)(h)
-        h = nn.Dropout2d(0.2)(h)
-        h = self.res_block_2(h) + h
-        h = nn.Dropout2d(0.2)(h)
-        h = self.conv_layer_3(h)
-        h = nn.BatchNorm2d(64).to(self.device)(h)
-        h = nn.ReLU().to(self.device)(h)
+        h = self.conv_BN_ReLU_1(x)
+        h = self.conv_BN_ReLU_2(h)
+        h = nn.MaxPool2d(2).to(self.device)(h)
+        h = self.conv_BN_ReLU_3(h)
+        h = self.conv_BN_ReLU_4(h)
+        h = nn.MaxPool2d(2).to(self.device)(h)
+        h = self.conv_BN_ReLU_5(h)
+        h = self.conv_BN_ReLU_6(h)
+        h = self.conv_BN_ReLU_7(h)
+        h = nn.MaxPool2d(2).to(self.device)(h)
+        h = self.conv_BN_ReLU_8(h)
+        h = self.conv_BN_ReLU_9(h)
+        h = self.conv_BN_ReLU_10(h)
+        h = nn.MaxPool2d(2).to(self.device)(h)
+        h = self.conv_BN_ReLU_11(h)
+        h = self.conv_BN_ReLU_12(h)
+        h = self.conv_BN_ReLU_13(h)
+        h = nn.MaxPool2d(2).to(self.device)(h)
         h = torch.flatten(h, 1)
-        h = nn.ReLU().to(self.device)(self.fc_layer_1(h))
+        h = self.fc_layer_1(h)
         # outout layer result
         # self.fc_layer_2(h) will be a nx2 tensor
         # n (denotes the input instance number): 0th dimension; 2 (denotes the class number): 1st dimension
         # we do softmax along dim=1 to get the normalized classification probability distributions for each instance
-        y_pred = self.activation_func_2(self.fc_layer_2(h))
+        y_pred = self.activation_func_last(self.fc_layer_2(h))
         return y_pred
 
     # backward error propagation will be implemented by pytorch automatically
@@ -86,7 +94,7 @@ class Method_CNN_CIFAR(method, nn.Module):
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
-        for epoch in range(self.max_epoch + 1): # you can do an early stop if self.max_epoch is too much...
+        for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
 
             for mini_batch in mini_batches:
                 X, y = mini_batch
@@ -106,21 +114,27 @@ class Method_CNN_CIFAR(method, nn.Module):
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
 
-            if epoch%5 == 0:
+            if (epoch-1)%1 == 0:
                 accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
                 print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', train_loss.item())
-    
+            if epoch%5 == 0:
+                pred_y = self.test(self.data['test']['X'])
+                accuracy_evaluator.data = {'pred_y': pred_y.cpu(), 'true_y': self.data['test']['y']}
+                print('Epoch:', epoch, 'Test Accuracy:', accuracy_evaluator.evaluate(), 'Test Loss:', train_loss.item())
+        del X, y
     def test(self, X):
         # do the testing, and result the result
         y = np.zeros(X.shape)
-        mini_batches = Dataset_Loader.create_mini_batches("CIFAR", X, y, self.batch_size)
-        y_pred = []
+        mini_batches = Dataset_Loader.create_mini_batches("CIFAR", X, y, self.batch_size, shuffle=False)
+        y_pred = np.zeros(shape=(1,10))
         for mini_batch in mini_batches:
             X, y = mini_batch
-            y_pred_batch = self.forward(torch.FloatTensor(np.array(X)).to(self.device))
-            y_pred.append(y_pred_batch)
+            X = X.to(self.device)
+            y_pred_batch = self.forward(X)
+            y_pred = np.append(y_pred, y_pred_batch.cpu().detach().numpy(), axis=0)
         # convert the probability distributions to the corresponding labels
         # instances will get the labels corresponding to the largest probability
+        y_pred = torch.LongTensor(y_pred[1:])
         return y_pred.max(1)[1]
     
     def run(self):
