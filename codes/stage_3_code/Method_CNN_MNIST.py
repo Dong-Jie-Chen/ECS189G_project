@@ -72,7 +72,7 @@ class Method_CNN_MNIST(method, nn.Module):
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
-        for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
+        for epoch in range(self.max_epoch + 1): # you can do an early stop if self.max_epoch is too much...
 
             for mini_batch in mini_batches:
                 X, y = mini_batch
