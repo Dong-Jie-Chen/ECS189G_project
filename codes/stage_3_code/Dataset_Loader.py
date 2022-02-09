@@ -63,15 +63,16 @@ class Dataset_Loader(dataset):
         for i in range(n_minibatches):
             X_mini = X[index[i * batch_size:(i + 1) * batch_size]]
             Y_mini = y[index[i * batch_size:(i + 1) * batch_size]]
-            X_mini = torch.FloatTensor(np.array(X_mini)).to(device)
-            Y_mini = torch.LongTensor(np.array(Y_mini)).to(device)
+            X_mini = torch.FloatTensor(np.array(X_mini))
+            Y_mini = torch.LongTensor(np.array(Y_mini))
             mini_batches.append((X_mini, Y_mini))
         if res_flag:
             n_minibatches += 1
             X_mini = X[index[i * batch_size:index.shape[0]]]
             Y_mini = y[index[i * batch_size:index.shape[0]]]
-            X_mini = torch.FloatTensor(np.array(X_mini)).to(device)
-            Y_mini = torch.LongTensor(np.array(Y_mini)).to(device)
+            X_mini = torch.FloatTensor(np.array(X_mini))
+            Y_mini = torch.LongTensor(np.array(Y_mini))
             mini_batches.append((X_mini, Y_mini))
 
         return mini_batches
+

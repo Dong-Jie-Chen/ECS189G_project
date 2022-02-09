@@ -33,6 +33,10 @@ class Method_CNN_CIFAR(method, nn.Module):
         self.activation_func_1 = nn.ReLU().to(self.device)
         self.conv_layer_2 = nn.Conv2d(32, 32, 5, 1).to(self.device)
         self.conv_layer_3 = nn.Conv2d(32, 64, 5, 1).to(self.device)
+        self.res_block_1 = nn.Sequential(nn.Conv2d(32, 32, 5, 1, 2), nn.BatchNorm2d(32), nn.ReLU(), \
+                                        nn.Conv2d(32, 32, 5, 1, 2), nn.BatchNorm2d(32), nn.ReLU()).to(self.device)
+        self.res_block_2 = nn.Sequential(nn.Conv2d(32, 32, 5, 1, 2), nn.BatchNorm2d(32), nn.ReLU(), \
+                                        nn.Conv2d(32, 32, 5, 1, 2), nn.BatchNorm2d(32), nn.ReLU()).to(self.device)
         self.fc_layer_1 = nn.Linear(20*20*64, 128).to(self.device)
         self.fc_layer_2 = nn.Linear(128, 10).to(self.device)
         # check here for nn.Softmax doc: https://pytorch.org/docs/stable/generated/torch.nn.Softmax.html
@@ -44,9 +48,19 @@ class Method_CNN_CIFAR(method, nn.Module):
     def forward(self, x):
         '''Forward propagation'''
         # hidden layer embeddings
-        h = self.activation_func_1(self.conv_layer_1(x))
-        h = nn.ReLU().to(self.device)(self.conv_layer_2(h))
-        h = nn.ReLU().to(self.device)(self.conv_layer_3(h))
+        h = self.conv_layer_1(x)
+        h = nn.BatchNorm2d(32).to(self.device)(h)
+        h = self.activation_func_1(h)
+        h = self.res_block_1(h) + h
+        h = self.conv_layer_2(h)
+        h = nn.BatchNorm2d(32).to(self.device)(h)
+        h = nn.ReLU().to(self.device)(h)
+        h = nn.Dropout2d(0.2)(h)
+        h = self.res_block_2(h) + h
+        h = nn.Dropout2d(0.2)(h)
+        h = self.conv_layer_3(h)
+        h = nn.BatchNorm2d(64).to(self.device)(h)
+        h = nn.ReLU().to(self.device)(h)
         h = torch.flatten(h, 1)
         h = nn.ReLU().to(self.device)(self.fc_layer_1(h))
         # outout layer result
@@ -76,7 +90,7 @@ class Method_CNN_CIFAR(method, nn.Module):
 
             for mini_batch in mini_batches:
                 X, y = mini_batch
-
+                X, y = X.to(self.device), y.to(self.device)
                 optimizer.zero_grad()
                 # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
                 y_pred = self.forward(X)
@@ -98,7 +112,13 @@ class Method_CNN_CIFAR(method, nn.Module):
     
     def test(self, X):
         # do the testing, and result the result
-        y_pred = self.forward(torch.FloatTensor(np.array(X)).to(self.device))
+        y = np.zeros(X.shape)
+        mini_batches = Dataset_Loader.create_mini_batches("CIFAR", X, y, self.batch_size)
+        y_pred = []
+        for mini_batch in mini_batches:
+            X, y = mini_batch
+            y_pred_batch = self.forward(torch.FloatTensor(np.array(X)).to(self.device))
+            y_pred.append(y_pred_batch)
         # convert the probability distributions to the corresponding labels
         # instances will get the labels corresponding to the largest probability
         return y_pred.max(1)[1]

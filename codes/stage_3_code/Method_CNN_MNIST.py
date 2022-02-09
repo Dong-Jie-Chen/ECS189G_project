@@ -76,7 +76,7 @@ class Method_CNN_MNIST(method, nn.Module):
 
             for mini_batch in mini_batches:
                 X, y = mini_batch
-
+                X, y = X.to(self.device), y.to(self.device)
                 optimizer.zero_grad()
                 # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
                 y_pred = self.forward(X)
