@@ -9,15 +9,17 @@ from codes.base_class.dataset import dataset
 import pickle
 import numpy as np
 import torch
+from torchvision import transforms
+from PIL import Image
 
 class Dataset_Loader(dataset):
     data = None
     dataset_source_folder_path = None
     dataset_source_file_name = None
-    
+
     def __init__(self, dName=None, dDescription=None):
         super().__init__(dName, dDescription)
-    
+
     def load(self):
         print('loading data...')
         X = []
@@ -27,17 +29,15 @@ class Dataset_Loader(dataset):
         f.close()
         print('training set size:', len(data['train']), 'testing set size:', len(data['test']))
         if self.dataset_source_file_name in ["MNIST"]:
-            X_train = [[d['image']] for d in data['train']]
-            y_train = [d['label'] for d in data['train']]
-            X_test = [[d['image']] for d in data['test']]
-            y_test = [d['label'] for d in data['test']]
+            X_train = np.array([[d['image']] for d in data['train']])
+            y_train = np.array([d['label'] for d in data['train']])
+            X_test = np.array([[d['image']] for d in data['test']])
+            y_test = np.array([d['label'] for d in data['test']])
         elif self.dataset_source_file_name in ["CIFAR"]:
             X_train = np.array([d['image'] for d in data['train']])
             y_train = np.array([d['label'] for d in data['train']])
             X_test = np.array([d['image'] for d in data['test']])
             y_test = np.array([d['label'] for d in data['test']])
-            X_train = X_train / 255
-            X_test = X_test / 255
             X_train = np.transpose(X_train, (0, 3, 1, 2))
             X_test = np.transpose(X_test, (0, 3, 1, 2))
         elif self.dataset_source_file_name == "ORL":
@@ -66,6 +66,9 @@ class Dataset_Loader(dataset):
             Y_mini = y[index[i * batch_size:(i + 1) * batch_size]]
             X_mini = torch.FloatTensor(np.array(X_mini))
             Y_mini = torch.LongTensor(np.array(Y_mini))
+            if method_n == "CIFAR":
+              X_mini = X_mini.to(device)
+              Y_mini = Y_mini.to(device)
             mini_batches.append((X_mini, Y_mini))
         if res_flag:
             i += 1
@@ -73,6 +76,9 @@ class Dataset_Loader(dataset):
             Y_mini = y[index[i * batch_size:index.shape[0]]]
             X_mini = torch.FloatTensor(np.array(X_mini))
             Y_mini = torch.LongTensor(np.array(Y_mini))
+            if method_n == "CIFAR":
+              X_mini = X_mini.to(device)
+              Y_mini = Y_mini.to(device)
             mini_batches.append((X_mini, Y_mini))
 
         return mini_batches

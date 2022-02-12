@@ -26,6 +26,7 @@ class method:
     method_description = None
     
     data = None
+    history = {}
     
     method_start_time = None
     method_stop_time = None
