@@ -8,6 +8,7 @@ Concrete MethodModule class for a specific learning MethodModule
 from codes.base_class.method import method
 from codes.stage_3_code.Evaluate_Accuracy import Evaluate_Accuracy
 from codes.stage_3_code.Dataset_Loader import Dataset_Loader
+import matplotlib.pyplot as plt
 import torch
 from torch import nn
 import numpy as np
@@ -28,12 +29,12 @@ class Method_CNN_MNIST(method, nn.Module):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
         # check here for nn.Linear doc: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
-        self.conv_layer_1 = nn.Conv2d(1, 32, 5, 1).to(self.device)
+        self.conv_layer_1 = nn.Conv2d(1, 32, 5, 1, 1).to(self.device)
         # check here for nn.ReLU doc: https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html
         self.activation_func_1 = nn.ReLU().to(self.device)
         self.conv_layer_2 = nn.Conv2d(32, 32, 5, 1).to(self.device)
         self.conv_layer_3 = nn.Conv2d(32, 64, 5, 1).to(self.device)
-        self.fc_layer_1 = nn.Linear(16*16*64, 128).to(self.device)
+        self.fc_layer_1 = nn.Linear(5*5*64, 128).to(self.device)
         self.fc_layer_2 = nn.Linear(128, 10).to(self.device)
         # check here for nn.Softmax doc: https://pytorch.org/docs/stable/generated/torch.nn.Softmax.html
         self.activation_func_2 = nn.LogSoftmax(dim=1).to(self.device)
@@ -45,6 +46,7 @@ class Method_CNN_MNIST(method, nn.Module):
         '''Forward propagation'''
         # hidden layer embeddings
         h = self.activation_func_1(self.conv_layer_1(x))
+        h = nn.MaxPool2d(2).to(self.device)(h)
         h = nn.ReLU().to(self.device)(self.conv_layer_2(h))
         h = nn.ReLU().to(self.device)(self.conv_layer_3(h))
         h = torch.flatten(h, 1)
@@ -72,6 +74,8 @@ class Method_CNN_MNIST(method, nn.Module):
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
+        acc_hist = []
+        loss_hist = []
         for epoch in range(self.max_epoch + 1): # you can do an early stop if self.max_epoch is too much...
 
             for mini_batch in mini_batches:
@@ -91,10 +95,27 @@ class Method_CNN_MNIST(method, nn.Module):
                 # check here for the opti.step doc: https://pytorch.org/docs/stable/optim.html
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
+                epoch_loss += train_loss.item()
+            epoch_loss = epoch_loss / len(mini_batches)
 
-            if epoch%5 == 0:
+            if (epoch-1)%1 == 0:
                 accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
-                print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', train_loss.item())
+                epoch_acc = accuracy_evaluator.evaluate()
+                print('Epoch:', epoch, 'Accuracy:', epoch_acc, 'Loss:', train_loss.item())
+
+            fig, ax1 = plt.subplots()
+            color = 'tab:red'
+            ax1.set_xlabel('epoch')
+            ax1.set_ylabel('loss', color=color)
+            ax1.plot(loss_hist, color=color)
+            ax1.tick_params(axis='y', labelcolor=color)
+            ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+            color = 'tab:blue'
+            ax2.set_ylabel('acc', color=color)  # we already handled the x-label with ax1
+            ax2.plot(acc_hist, color=color)
+            ax2.tick_params(axis='y', labelcolor=color)
+            fig.tight_layout()  # otherwise the right y-label is slightly clipped
+            plt.savefig('history_CIFAR.png')
     
     def test(self, X):
         # do the testing, and result the result
