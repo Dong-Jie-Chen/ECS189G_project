@@ -16,11 +16,11 @@ import numpy as np
 class Method_CNN_MNIST(method, nn.Module):
     data = None
     # it defines the max rounds to train the model
-    max_epoch = 500
+    max_epoch = 20
     # it defines the learning rate for gradient descent based optimizer for model learning
     learning_rate = 1e-3
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    batch_size = 128
+    batch_size = 10000
     # it defines the the MLP model architecture, e.g.,
     # how many layers, size of variables in each layer, activation function, etc.
     # the size of the input/output portal of the model architecture should be consistent with our data input and desired output
@@ -92,7 +92,7 @@ class Method_CNN_MNIST(method, nn.Module):
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
 
-            if epoch%50 == 0:
+            if epoch%5 == 0:
                 accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
                 print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', train_loss.item())
     
