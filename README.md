@@ -27,7 +27,7 @@ python script/stage_3_script/script_load_result_ORL.py
 ```
 
 ### Step 2: Load the data
-put train.csv and test.csv into data/stage_3_data
+put data into data/stage_3_data
 
 
 ### Step 3: Training (skip this if you only want to see the results)
