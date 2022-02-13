@@ -76,8 +76,8 @@ class Method_CNN_MNIST(method, nn.Module):
         # you can try to split X and y into smaller-sized batches by yourself
         acc_hist = []
         loss_hist = []
-        for epoch in range(self.max_epoch + 1): # you can do an early stop if self.max_epoch is too much...
-
+        for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
+            epoch_loss = 0
             for mini_batch in mini_batches:
                 X, y = mini_batch
                 X, y = X.to(self.device), y.to(self.device)
@@ -102,20 +102,22 @@ class Method_CNN_MNIST(method, nn.Module):
                 accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
                 epoch_acc = accuracy_evaluator.evaluate()
                 print('Epoch:', epoch, 'Accuracy:', epoch_acc, 'Loss:', train_loss.item())
+            loss_hist.append(epoch_loss)
+            acc_hist.append(epoch_acc)
 
-            fig, ax1 = plt.subplots()
-            color = 'tab:red'
-            ax1.set_xlabel('epoch')
-            ax1.set_ylabel('loss', color=color)
-            ax1.plot(loss_hist, color=color)
-            ax1.tick_params(axis='y', labelcolor=color)
-            ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-            color = 'tab:blue'
-            ax2.set_ylabel('acc', color=color)  # we already handled the x-label with ax1
-            ax2.plot(acc_hist, color=color)
-            ax2.tick_params(axis='y', labelcolor=color)
-            fig.tight_layout()  # otherwise the right y-label is slightly clipped
-            plt.savefig('history_CIFAR.png')
+        fig, ax1 = plt.subplots()
+        color = 'tab:red'
+        ax1.set_xlabel('epoch')
+        ax1.set_ylabel('loss', color=color)
+        ax1.plot(loss_hist, color=color)
+        ax1.tick_params(axis='y', labelcolor=color)
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        color = 'tab:blue'
+        ax2.set_ylabel('acc', color=color)  # we already handled the x-label with ax1
+        ax2.plot(acc_hist, color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
+        fig.tight_layout()  # otherwise the right y-label is slightly clipped
+        plt.savefig('history_MNIST.png')
     
     def test(self, X):
         # do the testing, and result the result

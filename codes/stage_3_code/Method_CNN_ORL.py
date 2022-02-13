@@ -77,8 +77,10 @@ class Method_CNN_ORL(method, nn.Module):
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
-        for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
-
+        acc_hist = []
+        loss_hist = []
+        for epoch in range(self.max_epoch + 1): # you can do an early stop if self.max_epoch is too much...
+            epoch_loss = 0
             for mini_batch in mini_batches:
                 X, y = mini_batch
                 X, y = X.to(self.device), y.to(self.device)
@@ -96,14 +98,34 @@ class Method_CNN_ORL(method, nn.Module):
                 # check here for the opti.step doc: https://pytorch.org/docs/stable/optim.html
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
-                #sched.step()
-            if (epoch-1)%5 == 0:
+                epoch_loss += train_loss.item()
+            epoch_loss = epoch_loss / len(mini_batches)
+
+            if (epoch-1)%1 == 0:
                 accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
-                print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', train_loss.item())
+                epoch_acc = accuracy_evaluator.evaluate()
+                print('Epoch:', epoch, 'Accuracy:', epoch_acc, 'Loss:', train_loss.item())
+            loss_hist.append(epoch_loss)
+            acc_hist.append(epoch_acc)
             if (epoch-1)%5 == 0:
                 pred_y = self.test(self.data['test']['X'])
                 accuracy_evaluator.data = {'pred_y': pred_y.cpu(), 'true_y': self.data['test']['y']}
                 print('Epoch:', epoch, 'Test Accuracy:', accuracy_evaluator.evaluate(), 'Test Loss:', train_loss.item())
+
+        fig, ax1 = plt.subplots()
+        color = 'tab:red'
+        ax1.set_xlabel('epoch')
+        ax1.set_ylabel('loss', color=color)
+        ax1.plot(loss_hist, color=color)
+        ax1.tick_params(axis='y', labelcolor=color)
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        color = 'tab:blue'
+        ax2.set_ylabel('acc', color=color)  # we already handled the x-label with ax1
+        ax2.plot(acc_hist, color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
+        fig.tight_layout()  # otherwise the right y-label is slightly clipped
+        plt.savefig('history_ORL.png')
+
     def test(self, X):
         # do the testing, and result the result
         y_pred = self.forward(torch.FloatTensor(np.array(X)).to(self.device))
