@@ -5,7 +5,7 @@
 git clone https://github.com/Dong-Jie-Chen/ECS189G_project
 ```
 ### Step 2: Load the data
-put train.csv and test.csv into data/stage_3_data
+put data into data/stage_3_data
 
 ### Step 3: Training (skip this if you only want to see the results)
 
