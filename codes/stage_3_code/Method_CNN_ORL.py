@@ -16,7 +16,7 @@ import numpy as np
 class Method_CNN_ORL(method, nn.Module):
     data = None
     # it defines the max rounds to train the model
-    max_epoch = 25
+    max_epoch = 100
     # it defines the learning rate for gradient descent based optimizer for model learning
     learning_rate = 1e-4
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -28,12 +28,12 @@ class Method_CNN_ORL(method, nn.Module):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
         # check here for nn.Linear doc: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
-        self.conv_layer_1 = nn.Conv2d(3, 32, 5, 1).to(self.device)
+        self.conv_layer_1 = nn.Conv2d(3, 32, 3, 1).to(self.device)
         # check here for nn.ReLU doc: https://pytorch.org/docs/stable/generated/torch.nn.ReLU.html
         self.activation_func_1 = nn.ReLU().to(self.device)
-        self.conv_layer_2 = nn.Conv2d(32, 32, 5, 1).to(self.device)
-        self.conv_layer_3 = nn.Conv2d(32, 64, 5, 1).to(self.device)
-        self.fc_layer_1 = nn.Linear(21*16*64, 128).to(self.device)
+        self.conv_layer_2 = nn.Conv2d(32, 32, 3, 1).to(self.device)
+        self.conv_layer_3 = nn.Conv2d(32, 64, 3, 1).to(self.device)
+        self.fc_layer_1 = nn.Linear(3*2*64, 128).to(self.device)
         self.fc_layer_2 = nn.Linear(128, 40).to(self.device)
         # check here for nn.Softmax doc: https://pytorch.org/docs/stable/generated/torch.nn.Softmax.html
         self.activation_func_2 = nn.LogSoftmax(dim=1).to(self.device)
@@ -45,9 +45,9 @@ class Method_CNN_ORL(method, nn.Module):
         '''Forward propagation'''
         # hidden layer embeddings
         h = self.activation_func_1(self.conv_layer_1(x))
-        h = nn.MaxPool2d(2).to(self.device)(h)
+        h = nn.MaxPool2d(5).to(self.device)(h)
         h = nn.ReLU().to(self.device)(self.conv_layer_2(h))
-        h = nn.MaxPool2d(2).to(self.device)(h)
+        h = nn.MaxPool2d(4).to(self.device)(h)
         h = nn.ReLU().to(self.device)(self.conv_layer_3(h))
         h = torch.flatten(h, 1)
         h = nn.ReLU().to(self.device)(self.fc_layer_1(h))
@@ -71,7 +71,9 @@ class Method_CNN_ORL(method, nn.Module):
         # for training accuracy investigation purpose
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
         mini_batches = Dataset_Loader.create_mini_batches("ORL", X, y, self.batch_size)
-
+        # Set up one-cycle learning rate scheduler
+        #sched = torch.optim.lr_scheduler.OneCycleLR(optimizer, self.learning_rate, epochs=20,
+                                                    #steps_per_epoch=len(mini_batches))
         # it will be an iterative gradient updating process
         # we don't do mini-batch, we use the whole input as one batch
         # you can try to split X and y into smaller-sized batches by yourself
@@ -94,7 +96,7 @@ class Method_CNN_ORL(method, nn.Module):
                 # check here for the opti.step doc: https://pytorch.org/docs/stable/optim.html
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
-
+                #sched.step()
             if (epoch-1)%5 == 0:
                 accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
                 print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', train_loss.item())
