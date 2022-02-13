@@ -8,6 +8,7 @@ Concrete MethodModule class for a specific learning MethodModule
 from codes.base_class.method import method
 from codes.stage_3_code.Evaluate_Accuracy import Evaluate_Accuracy
 from codes.stage_3_code.Dataset_Loader import Dataset_Loader
+import matplotlib.pyplot as plt
 import torch
 from torch import nn
 import numpy as np
