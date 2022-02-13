@@ -18,7 +18,7 @@ import time
 class Method_CNN_CIFAR(method, nn.Module):
     data = None
     # it defines the max rounds to train the model
-    max_epoch = 10
+    max_epoch = 50
     # it defines the learning rate for gradient descent based optimizer for model learning
     learning_rate = 1e-2
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
