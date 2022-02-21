@@ -11,9 +11,12 @@ import numpy as np
 import torch
 import os
 import re
+import json
+import string
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from torchtext.legacy import data
+
 
 class Dataset_Loader(dataset):
     data = None
@@ -28,34 +31,89 @@ class Dataset_Loader(dataset):
         print('loading data...')
         train_dir = os.path.join(self.dataset_source_folder_path, 'train')
         test_dir = os.path.join(self.dataset_source_folder_path, 'test')
+        if os.path.exists(os.path.join(self.dataset_source_folder_path, 'train.json')):
+            X_train, y_train = self.load_json('train')
+            X_test, y_test = self.load_json('test')
+        else:
+            X_train, y_train = self.load_data(train_dir)
+            X_test, y_test = self.load_data(test_dir)
 
-        X_train, y_train = self.load_data(train_dir)
-        X_test, y_test = self.load_data(test_dir)
+        self.save_json(X_train, y_train, 'train')
+        self.save_json(X_test, y_test, 'test')
 
-        TEXT = data.Field(tokenize='spacy',
+        self.TEXT = data.Field(tokenize='spacy',
                           tokenizer_language='en_core_web_sm',
                           include_lengths=True)
 
-        LABEL = data.LabelField(dtype=torch.float)
+        self.LABEL = data.LabelField(dtype=torch.float)
 
-        self.tokenizer = get_tokenizer('basic_english')
-        vocab = build_vocab_from_iterator(self.yield_tokens(X_train), specials=["<unk>"])
-        vocab.set_default_index(vocab["<unk>"])
-        self.vocab_size = len(vocab)
+        fields = {'text': ('text', self.TEXT), 'label': ('label', self.LABEL)}
+        train_data, test_data = data.TabularDataset.splits(
+            path=self.dataset_source_folder_path,
+            train='train.json',
+            test='test.json',
+            format='json',
+            fields=fields
+        )
 
-        self.text_pipeline = lambda x: vocab(self.tokenizer(x))
-        self.label_pipeline = lambda x: int(x)
+        MAX_VOCAB_SIZE = 25_000
+
+        self.TEXT.build_vocab(train_data,
+                         max_size=MAX_VOCAB_SIZE,
+                         vectors="glove.6B.100d",
+                         unk_init=torch.Tensor.normal_)
+
+        self.LABEL.build_vocab(train_data)
+
+        # No. of unique tokens in text
+        print("Size of TEXT vocabulary:", len(self.TEXT.vocab))
+
+        # No. of unique tokens in label
+        print("Size of LABEL vocabulary:", len(self.LABEL.vocab))
+
+        self.train_iterator, self.test_iterator = data.BucketIterator.splits(
+            (train_data, test_data),
+            batch_size=64,
+            sort_key=lambda x: len(x.text),
+            sort_within_batch=True)
+
+        self.vocab_size = len(self.TEXT.vocab)
 
         return X_train, X_test, y_train, y_test
 
-    def yield_tokens(self, data_iter):
-        for text in data_iter:
-            yield self.tokenizer(text)
+    def save_json(self, X, y, mode):
+
+        json_lst = []
+        for text, label in zip(X, y):
+            if label == 0:
+                json_lst.append({'text': text, 'label': 'neg'})
+            elif label == 1:
+                json_lst.append({'text': text, 'label': 'pos'})
+        with open(os.path.join(self.dataset_source_folder_path, f'{mode}.json'), 'w') as outfile:
+            for item in json_lst:
+                outfile.write(json.dumps(item) + "\n")
+
+    def load_json(self, mode):
+
+        X, y = [], []
+        with open(os.path.join(self.dataset_source_folder_path, f'{mode}.json')) as file:
+            for line in file:
+                dic = json.loads(line)
+                X.append(dic['text'])
+                if dic['label'] == 'neg':
+                    y.append(0)
+                elif dic['label'] == 'pos':
+                    y.append(1)
+
+        return X, y
 
     def text_clean(self, text):
         text = text.lower()
-        text = re.sub("\\s", " ", text)
-        text = re.sub("[^a-zA-Z' ]", "", text)
+        text = re.sub('\[.*?\]', '', text)
+        text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
+        text = re.sub('\w*\d\w*', '', text)
+        text = re.sub('[''"",,,]', '', text)
+        text = re.sub('\n', '', text)
         text = text.split(' ')
         return text
 
@@ -65,47 +123,14 @@ class Dataset_Loader(dataset):
             y_dir = os.path.join(dir, y_label)
             for f_name in os.listdir(y_dir):
                 with open(os.path.join(y_dir, f_name)) as f:
-                    x_val = f.read()
+                    x_val = self.text_clean(f.read())
                 X.append(x_val)
                 y.append(y_val)
         return X, y
 
-    def collate_batch(self, batch_X, batch_y):
-        label_list, text_list, offsets = [], [], [0]
-        for _label, _text in zip(batch_y, batch_X):
-            label_list.append(self.label_pipeline(_label))
-            processed_text = torch.tensor(self.text_pipeline(_text), dtype=torch.int64)
-            text_list.append(processed_text)
-            offsets.append(processed_text.size(0))
-        label_list = torch.tensor(label_list, dtype=torch.int64)
-        offsets = torch.tensor(offsets[:-1]).cumsum(dim=0)
-        text_list = torch.cat(text_list)
-        return text_list.to(self.device), label_list.to(self.device), offsets.to(self.device)
-
-    def create_mini_batches(self, method_n, X, y, batch_size, shuffle=True):
-        #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-        index = np.arange(len(X))
-        if shuffle:
-          np.random.shuffle(index)
-        index = list(index)
-        n_minibatches = len(X) // batch_size
-        res_flag = (len(X) % batch_size) > 0
-        i = 0
-        mini_batches = []
-        for i in range(n_minibatches):
-            X_mini = [X[idx] for idx in index[i * batch_size:(i + 1) * batch_size]]
-            Y_mini = [y[idx]for idx in index[i * batch_size:(i + 1) * batch_size]]
-            X_mini, Y_mini, offsets_mini = self.collate_batch(X_mini, Y_mini)
-            #Y_mini = torch.unsqueeze(Y_mini, 1)
-            mini_batches.append((X_mini, Y_mini, offsets_mini))
-        if res_flag:
-            i += 1
-            X_mini = [X[idx] for idx in index[i * batch_size:(i + 1) * batch_size]]
-            Y_mini = [y[idx] for idx in index[i * batch_size:(i + 1) * batch_size]]
-            X_mini, Y_mini, offsets_mini = self.collate_batch(X_mini, Y_mini)
-            #Y_mini = torch.unsqueeze(Y_mini, 1)
-            mini_batches.append((X_mini, Y_mini, offsets_mini))
-
-        return mini_batches
-
+    def create_mini_batches(self, method_n, batch_size, train=True):
+        # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        if train:
+            return self.train_iterator
+        else:
+            return self.test_iterator

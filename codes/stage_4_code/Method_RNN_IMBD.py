@@ -28,25 +28,28 @@ class Method_RNN_IMDB(method, nn.Module):
     # it defines the the MLP model architecture, e.g.,
     # how many layers, size of variables in each layer, activation function, etc.
     # the size of the input/output portal of the model architecture should be consistent with our data input and desired output
-    def __init__(self, mName, mDescription, vocab_size):
+    def __init__(self, mName, mDescription, dataset):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
-        self.embedding = nn.EmbeddingBag(num_embeddings=vocab_size, embedding_dim=self.embed_dim, sparse=True)
-        #self.embedding_1 = nn.Embedding(vocab_size, self.embed_dim)
-        self.rnn_1 = nn.RNN(1, 16, 1, batch_first=True)
-        self.fc = nn.Linear(16, 2)
+        #self.embedding = nn.EmbeddingBag(num_embeddings=vocab_size, embedding_dim=self.embed_dim, sparse=True)
+        self.embedding = nn.Embedding(dataset.vocab_size, self.embed_dim, padding_idx=dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token])
+        self.rnn_1 = nn.LSTM(self.embed_dim, 16, 2, bidirectional=True)
+        self.fc = nn.Linear(16 * 2, 1)
         self.act = nn.Sigmoid()
 
 
     # it defines the forward propagation function for input x
     # this function will calculate the output layer by layer
 
-    def forward(self, x, offsets, train_flag=True):
+    def forward(self, x, text_length, train_flag=True):
         '''Forward propagation'''
-        embedded = self.embedding(x, offsets)
-        embedded = torch.unsqueeze(embedded, 2)
-        x = self.rnn_1(embedded)
-        return self.fc(x)
+        embedded = self.embedding(x)
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_length.to('cpu'))
+        packed_output, (hidden, cell) = self.rnn_1(packed_embedded)
+        hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1)
+        dense_outputs = self.fc(hidden)
+        outputs = self.act(dense_outputs)
+        return outputs
 
     # backward error propagation will be implemented by pytorch automatically
     # so we don't need to define the error backpropagation function here
@@ -54,9 +57,9 @@ class Method_RNN_IMDB(method, nn.Module):
     def train(self, dataset, X, y):
         # check here for the torch.optim doc: https://pytorch.org/docs/stable/optim.html
         optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
-        mini_batches = dataset.create_mini_batches("IMBD", X, y, self.batch_size)
+        mini_batches = dataset.create_mini_batches("IMBD", self.batch_size)
         # check here for the nn.CrossEntropyLoss doc: https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
-        loss_function = nn.CrossEntropyLoss().to(self.device)
+        loss_function = nn.BCELoss().to(self.device)
         # for training accuracy investigation purpose
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
         # it will be an iterative gradient updating process
@@ -69,12 +72,12 @@ class Method_RNN_IMDB(method, nn.Module):
             epoch_loss = 0
             epoch_acc = 0
             for mini_batch in mini_batches:
-                X, y, offsets = mini_batch
+                X, text_length = mini_batch.text
                 optimizer.zero_grad()
                 # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
-                y_pred = self.forward(X, offsets)
+                y_pred = self.forward(X, text_length).squeeze(1)
                 # convert y to torch.tensor as well
-                y_true = y
+                y_true = mini_batch.label
                 # calculate the training loss
                 train_loss = loss_function(y_pred, y_true)
 
@@ -93,14 +96,14 @@ class Method_RNN_IMDB(method, nn.Module):
 
             duration = time.time() - start
             if (epoch-1)%1 == 0:
-                accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
+                accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': np.round(y_pred.detach().cpu())}
                 epoch_acc = accuracy_evaluator.evaluate()
                 print('Epoch:', epoch, 'Accuracy:', epoch_acc, 'Loss:', train_loss.item(), 'Time:', duration)
             #print(epoch_loss, epoch_acc)
             loss_hist.append(epoch_loss)
             acc_hist.append(epoch_acc)
             if (epoch-1)%1 == 0:
-                pred_y = self.test(dataset, self.data['test']['X'])
+                pred_y = self.test(dataset)
                 accuracy_evaluator.data = {'pred_y': pred_y.cpu(), 'true_y': self.data['test']['y']}
                 print('Epoch:', epoch, 'Test Accuracy:', accuracy_evaluator.evaluate(), 'Test Loss:', train_loss.item())
         fig, ax1 = plt.subplots()
@@ -115,21 +118,21 @@ class Method_RNN_IMDB(method, nn.Module):
         ax2.plot(acc_hist, color=color)
         ax2.tick_params(axis='y', labelcolor=color)
         fig.tight_layout()  # otherwise the right y-label is slightly clipped
-        plt.savefig('history_CIFAR.png')
-    def test(self, dataset, X):
+        plt.savefig('history_IMBD.png')
+
+    def test(self, dataset):
         # do the testing, and result the result
-        y = list(np.zeros(len(X)))
-        mini_batches = dataset.create_mini_batches("IMBD", X, y, self.batch_size)
-        y_pred = np.zeros(shape=(1,2))
+        mini_batches = dataset.create_mini_batches("IMBD", self.batch_size, train=False)
+        y_pred = np.zeros(shape=(1))
         for mini_batch in mini_batches:
-            X, y, offsets = mini_batch
+            X, text_length = mini_batch.text
             X = X.to(self.device)
-            y_pred_batch = self.forward(X, offsets)
-            y_pred = np.append(y_pred, y_pred_batch.cpu().detach().numpy(), axis=0)
+            y_pred_batch = self.forward(X, text_length).squeeze(1)
+            y_pred = np.append(y_pred, y_pred_batch.cpu().detach().numpy())
         # convert the probability distributions to the corresponding labels
         # instances will get the labels corresponding to the largest probability
-        y_pred = torch.LongTensor(y_pred[1:])
-        return y_pred.max(1)[1]
+        y_pred = torch.LongTensor(np.round(y_pred[1:]))
+        return y_pred
     
     def run(self, dataset):
         print('method running...')

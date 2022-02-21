@@ -25,7 +25,7 @@ if dataset == "IMBD":
     data_obj.load()
     print(data_obj.vocab_size)
 
-    method_obj = Method_RNN_IMDB('RNN', '', data_obj.vocab_size)
+    method_obj = Method_RNN_IMDB('RNN', '', data_obj)
 
 
     result_obj = Result_Saver('saver', '')
