@@ -32,10 +32,10 @@ class Method_RNN_IMDB(method, nn.Module):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
         #self.embedding = nn.EmbeddingBag(num_embeddings=vocab_size, embedding_dim=self.embed_dim, sparse=True)
-        self.embedding = nn.Embedding(dataset.vocab_size, self.embed_dim, padding_idx=dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token])
-        self.rnn_1 = nn.LSTM(self.embed_dim, 16, 2, bidirectional=True)
-        self.fc = nn.Linear(16 * 2, 1)
-        self.act = nn.Sigmoid()
+        self.embedding = nn.Embedding(dataset.vocab_size, self.embed_dim, padding_idx=dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]).to(self.device)
+        self.rnn_1 = nn.LSTM(self.embed_dim, 16, 2, bidirectional=True).to(self.device)
+        self.fc = nn.Linear(16 * 2, 1).to(self.device)
+        self.act = nn.Sigmoid().to(self.device)
 
 
     # it defines the forward propagation function for input x
@@ -44,7 +44,7 @@ class Method_RNN_IMDB(method, nn.Module):
     def forward(self, x, text_length, train_flag=True):
         '''Forward propagation'''
         embedded = self.embedding(x)
-        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_length.to('cpu'))
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_length.to('cpu')).to(self.device)
         packed_output, (hidden, cell) = self.rnn_1(packed_embedded)
         hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1)
         dense_outputs = self.fc(hidden)

@@ -42,8 +42,8 @@ class Dataset_Loader(dataset):
         self.save_json(X_test, y_test, 'test')
 
         self.TEXT = data.Field(tokenize='spacy',
-                          tokenizer_language='en_core_web_sm',
-                          include_lengths=True)
+                               tokenizer_language='en_core_web_sm',
+                               include_lengths=True)
 
         self.LABEL = data.LabelField(dtype=torch.float)
 
@@ -59,9 +59,9 @@ class Dataset_Loader(dataset):
         MAX_VOCAB_SIZE = 25_000
 
         self.TEXT.build_vocab(train_data,
-                         max_size=MAX_VOCAB_SIZE,
-                         vectors="glove.6B.100d",
-                         unk_init=torch.Tensor.normal_)
+                              max_size=MAX_VOCAB_SIZE,
+                              vectors="glove.6B.100d",
+                              unk_init=torch.Tensor.normal_)
 
         self.LABEL.build_vocab(train_data)
 
@@ -75,7 +75,8 @@ class Dataset_Loader(dataset):
             (train_data, test_data),
             batch_size=64,
             sort_key=lambda x: len(x.text),
-            sort_within_batch=True)
+            sort_within_batch=True,
+            device=self.device)
 
         self.vocab_size = len(self.TEXT.vocab)
 
