@@ -9,7 +9,7 @@ from codes.base_class.setting import setting
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-class Setting_Train_Test_Split(setting):
+class Setting_IMDB(setting):
 
     def print_setup_summary(self):
         print('dataset:', self.dataset.dataset_name, ', method:', self.method.method_name,

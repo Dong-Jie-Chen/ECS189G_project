@@ -18,7 +18,7 @@ from torchtext.vocab import build_vocab_from_iterator
 from torchtext.legacy import data
 
 
-class Dataset_Loader(dataset):
+class Dataset_Loader_IMDB(dataset):
     data = None
     dataset_source_folder_path = None
     dataset_source_file_name = None

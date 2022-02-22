@@ -7,7 +7,7 @@ Concrete MethodModule class for a specific learning MethodModule
 
 from codes.base_class.method import method
 from codes.stage_4_code.Evaluate_Accuracy import Evaluate_Accuracy
-from codes.stage_4_code.Dataset_Loader import Dataset_Loader
+from codes.stage_4_code.Dataset_Loader_IMDB import Dataset_Loader_IMDB
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import torch
@@ -103,8 +103,8 @@ class Method_RNN_IMDB(method, nn.Module):
             loss_hist.append(epoch_loss)
             acc_hist.append(epoch_acc)
             if (epoch-1)%1 == 0:
-                pred_y = self.test(dataset)
-                accuracy_evaluator.data = {'pred_y': pred_y.cpu(), 'true_y': self.data['test']['y']}
+                pred_y, true_y = self.test(dataset)
+                accuracy_evaluator.data = {'pred_y': pred_y.cpu(), 'true_y': true_y.cpu()}
                 print('Epoch:', epoch, 'Test Accuracy:', accuracy_evaluator.evaluate(), 'Test Loss:', train_loss.item())
         fig, ax1 = plt.subplots()
         color = 'tab:red'
@@ -124,21 +124,24 @@ class Method_RNN_IMDB(method, nn.Module):
         # do the testing, and result the result
         mini_batches = dataset.create_mini_batches("IMBD", self.batch_size, train=False)
         y_pred = np.zeros(shape=(1))
+        y_true = np.zeros(shape=(1))
         for mini_batch in mini_batches:
             X, text_length = mini_batch.text
             X = X.to(self.device)
             y_pred_batch = self.forward(X, text_length).squeeze(1)
             y_pred = np.append(y_pred, y_pred_batch.cpu().detach().numpy())
+            y_true = np.append(y_true, mini_batch.label.detach().cpu().numpy())
         # convert the probability distributions to the corresponding labels
         # instances will get the labels corresponding to the largest probability
         y_pred = torch.LongTensor(np.round(y_pred[1:]))
-        return y_pred
+        y_true = torch.LongTensor(y_true[1:])
+        return y_pred, y_true
     
     def run(self, dataset):
         print('method running...')
         print('--start training...')
         self.train(dataset, self.data['train']['X'], self.data['train']['y'])
         print('--start testing...')
-        pred_y = self.test(dataset, self.data['test']['X'])
-        return {'pred_y': pred_y.cpu(), 'true_y': self.data['test']['y']}
+        pred_y, true_y = self.test(dataset)
+        return {'pred_y': pred_y.cpu(), 'true_y': true_y.cpu()}
             
