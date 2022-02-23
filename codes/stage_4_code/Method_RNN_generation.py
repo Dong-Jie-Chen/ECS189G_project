@@ -52,6 +52,7 @@ class Method_RNN_generation(method, nn.Module):
             epoch_loss = 0
             for batch, (X, y) in enumerate(self.data):
                 optimizer.zero_grad()
+                X, y = X.to(self.device), y.to(self.device)
                 # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
                 y_pred, (state_h, state_c) = self.forward(X, (state_h, state_c))
                 # convert y to torch.tensor as well
@@ -89,28 +90,28 @@ class Method_RNN_generation(method, nn.Module):
         plt.savefig('history_IMBD.png')
 
     def init_state(self, sequence_length):
-        return (torch.zeros(self.num_layers, sequence_length, self.hidden_size),
-                torch.zeros(self.num_layers, sequence_length, self.hidden_size))
+        return (torch.zeros(self.num_layers, sequence_length, self.hidden_size).to(self.device),
+                torch.zeros(self.num_layers, sequence_length, self.hidden_size).to(self.device))
 
-    def test(self, dataset, text, next_words=100):
+    def test(self, dataset, text, next_words=20):
         # do the testing, and result the result
         words = text.split(' ')
         state_h, state_c = self.init_state(len(words))
         for i in range(0, next_words):
-            x = torch.tensor([[dataset.word_to_index[w] for w in words[i:]]])
+            x = torch.tensor([[dataset.word_to_index[w] for w in words[i:]]]).to(self.device)
             y_pred, (state_h, state_c) = self.forward(x, (state_h, state_c))
             last_word_logits = y_pred[0][-1]
-            p = torch.nn.functional.softmax(last_word_logits, dim=0).detach().numpy()
+            p = torch.nn.functional.softmax(last_word_logits, dim=0).detach().cpu().numpy()
             word_index = np.random.choice(len(last_word_logits), p=p)
             words.append(dataset.index_to_word[word_index])
         return words
-    
+
     def run(self, dataset):
         print('method running...')
         print('--start training...')
         self.train()
         print('--start testing...')
-        result = self.test(dataset, 'Knock knock. Whos there?')
+        result = self.test(dataset, 'What did the')
         print(result)
 
         return result
