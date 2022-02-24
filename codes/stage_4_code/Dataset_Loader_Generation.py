@@ -27,6 +27,7 @@ class Dataset_Loader_Generation(dataset, torch.utils.data.Dataset):
         print('loading data...')
         train_dir = os.path.join(self.dataset_source_folder_path, self.dataset_source_file_name)
         train_df = pd.read_csv(train_dir)
+        train_df['Joke'] = train_df['Joke'].astype(str) + ' <EOS>'
         text = train_df['Joke'].str.cat(sep=' ').split(' ')
         return text
 
