@@ -24,7 +24,9 @@ class Method_RNN_IMDB(method, nn.Module):
     learning_rate = 0.001
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 256
-    embed_dim = 64
+    embed_dim = 100
+    h_size = 16
+    n_layers = 2
     # it defines the the MLP model architecture, e.g.,
     # how many layers, size of variables in each layer, activation function, etc.
     # the size of the input/output portal of the model architecture should be consistent with our data input and desired output
@@ -33,10 +35,15 @@ class Method_RNN_IMDB(method, nn.Module):
         nn.Module.__init__(self)
         #self.embedding = nn.EmbeddingBag(num_embeddings=vocab_size, embedding_dim=self.embed_dim, sparse=True)
         self.embedding = nn.Embedding(dataset.vocab_size, self.embed_dim, padding_idx=dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]).to(self.device)
-        #self.rnn_1 = nn.LSTM(self.embed_dim, 16, 2, bidirectional=True).to(self.device)
-        self.rnn_1 = nn.RNN(input_size=self.embed_dim, hidden_size=64, num_layers=2, bidirectional=True, dropout=0.2).to(self.device)
-        self.fc = nn.Linear(64 * 2, 1).to(self.device)
+        #self.rnn_1 = nn.LSTM(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
+        #self.rnn_1 = nn.RNN(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
+        self.rnn_1 = nn.GRU(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
+        self.fc = nn.Linear(self.h_size * 2, 1).to(self.device)
         self.act = nn.Sigmoid().to(self.device)
+        #initialize two tokens to be zero
+        UNK_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.unk_token]
+        self.embedding.weight.data[UNK_IDX] = torch.zeros(self.embed_dim)
+        self.embedding.weight.data[dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]] = torch.zeros(self.embed_dim)
 
 
     # it defines the forward propagation function for input x
@@ -46,9 +53,9 @@ class Method_RNN_IMDB(method, nn.Module):
         '''Forward propagation'''
         embedded = self.embedding(x)
         packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_length.to('cpu')).to(self.device)
-        #packed_output, (hidden, cell) = self.rnn_1(packed_embedded)
-        packed_output, hidden = self.rnn_1(packed_embedded)
-        hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1)
+        #packed_output, (hidden, cell) = self.rnn_1(packed_embedded)  # use this line for LSTM
+        packed_output, hidden = self.rnn_1(packed_embedded)  # use this line for RNN and GRU
+        hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1) # comment this line if bidirection=False
         dense_outputs = self.fc(hidden)
         outputs = self.act(dense_outputs)
         return outputs
