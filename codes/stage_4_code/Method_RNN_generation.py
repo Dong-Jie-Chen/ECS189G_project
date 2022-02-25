@@ -21,17 +21,17 @@ class Method_RNN_generation(method, nn.Module):
     max_epoch = 5
     learning_rate = 0.001
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    batch_size = 16
+    batch_size = 64
     embed_dim = 64
-    sequence_length = 4
+    sequence_length = 3
     num_layers = 3
-    hidden_size = 16
+    hidden_size = 256
     def __init__(self, mName, mDescription, dataset):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
         self.embedding = nn.Embedding(dataset.vocab_size, self.embed_dim).to(self.device)
         self.rnn_1 = nn.LSTM(self.embed_dim, self.hidden_size, self.num_layers).to(self.device)
-        self.fc = nn.Linear(16, dataset.vocab_size).to(self.device)
+        self.fc = nn.Linear(self.hidden_size, dataset.vocab_size).to(self.device)
 
     def forward(self, x, pre_sentence, train_flag=True):
         '''Forward propagation'''

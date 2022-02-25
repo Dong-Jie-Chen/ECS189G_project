@@ -21,9 +21,9 @@ class Method_RNN_IMDB(method, nn.Module):
     # it defines the max rounds to train the model
     max_epoch = 50
     # it defines the learning rate for gradient descent based optimizer for model learning
-    learning_rate = 5
+    learning_rate = 0.001
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    batch_size = 16
+    batch_size = 256
     embed_dim = 64
     # it defines the the MLP model architecture, e.g.,
     # how many layers, size of variables in each layer, activation function, etc.
@@ -33,8 +33,9 @@ class Method_RNN_IMDB(method, nn.Module):
         nn.Module.__init__(self)
         #self.embedding = nn.EmbeddingBag(num_embeddings=vocab_size, embedding_dim=self.embed_dim, sparse=True)
         self.embedding = nn.Embedding(dataset.vocab_size, self.embed_dim, padding_idx=dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]).to(self.device)
-        self.rnn_1 = nn.LSTM(self.embed_dim, 16, 2, bidirectional=True).to(self.device)
-        self.fc = nn.Linear(16 * 2, 1).to(self.device)
+        #self.rnn_1 = nn.LSTM(self.embed_dim, 16, 2, bidirectional=True).to(self.device)
+        self.rnn_1 = nn.RNN(input_size=self.embed_dim, hidden_size=64, num_layers=2, bidirectional=True, dropout=0.2).to(self.device)
+        self.fc = nn.Linear(64 * 2, 1).to(self.device)
         self.act = nn.Sigmoid().to(self.device)
 
 
@@ -45,7 +46,8 @@ class Method_RNN_IMDB(method, nn.Module):
         '''Forward propagation'''
         embedded = self.embedding(x)
         packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_length.to('cpu')).to(self.device)
-        packed_output, (hidden, cell) = self.rnn_1(packed_embedded)
+        #packed_output, (hidden, cell) = self.rnn_1(packed_embedded)
+        packed_output, hidden = self.rnn_1(packed_embedded)
         hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1)
         dense_outputs = self.fc(hidden)
         outputs = self.act(dense_outputs)
@@ -56,7 +58,7 @@ class Method_RNN_IMDB(method, nn.Module):
 
     def train(self, dataset, X, y):
         # check here for the torch.optim doc: https://pytorch.org/docs/stable/optim.html
-        optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.Adam(self.parameters())
         mini_batches = dataset.create_mini_batches("IMBD", self.batch_size)
         # check here for the nn.CrossEntropyLoss doc: https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
         loss_function = nn.BCELoss().to(self.device)
@@ -84,7 +86,7 @@ class Method_RNN_IMDB(method, nn.Module):
                 # check here for the loss.backward doc: https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html
                 # do the error backpropagation to calculate the gradients
                 train_loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.parameters(), 0.1)
+                #torch.nn.utils.clip_grad_norm_(self.parameters(), 0.1)
                 # check here for the opti.step doc: https://pytorch.org/docs/stable/optim.html
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
