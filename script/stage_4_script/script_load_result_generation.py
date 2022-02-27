@@ -26,7 +26,7 @@ def test(model, text, next_words=20):
         words.append(next_word)
         if next_word == '<EOS>':
             break
-    return words
+    return " ".join(words)
 
 if __name__ == "__main__":
     result_obj = Model_Loader('saver', '')
