@@ -39,7 +39,7 @@ class Method_RNN_IMDB(method, nn.Module):
         self.rnn_1 = nn.RNN(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
         #self.rnn_1 = nn.GRU(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
         self.fc_1 = nn.Linear(self.h_size * 2, 32).to(self.device)
-        self.fc = nn.Linear(32, 1).to(self.device)
+        self.fc = nn.Linear(self.h_size * 2, 1).to(self.device)
         self.act_1 = nn.ReLU().to(self.device)
         self.act = nn.Sigmoid().to(self.device)
         #initialize two tokens to be zero
