@@ -23,7 +23,7 @@ class Method_RNN_IMDB(method, nn.Module):
     # it defines the learning rate for gradient descent based optimizer for model learning
     learning_rate = 0.0001
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    batch_size = 256
+    batch_size = 64
     embed_dim = 500
     h_size = 32
     n_layers = 2
