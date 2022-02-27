@@ -16,6 +16,8 @@ import string
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from torchtext.legacy import data
+import nltk
+from nltk.corpus import stopwords
 
 
 class Dataset_Loader_IMDB(dataset):
@@ -29,6 +31,7 @@ class Dataset_Loader_IMDB(dataset):
 
     def load(self):
         print('loading data...')
+        nltk.download('stopwords')
         train_dir = os.path.join(self.dataset_source_folder_path, 'train')
         test_dir = os.path.join(self.dataset_source_folder_path, 'test')
         if os.path.exists(os.path.join(self.dataset_source_folder_path, 'train.json')):
@@ -37,6 +40,8 @@ class Dataset_Loader_IMDB(dataset):
         else:
             X_train, y_train = self.load_data(train_dir)
             X_test, y_test = self.load_data(test_dir)
+
+        print("max length: ", len(max(X_train, key=lambda i: len(i))))
 
         self.save_json(X_train, y_train, 'train')
         self.save_json(X_test, y_test, 'test')
@@ -109,14 +114,34 @@ class Dataset_Loader_IMDB(dataset):
         return X, y
 
     def text_clean(self, text):
-        text = text.lower()
+        clean = re.compile('<.*?>')
+        text = re.sub(clean, '', text)
+        text = re.sub(r"http\S+", "", text)
+        text = re.sub(r"www\S+", "", text)
         text = re.sub('\[.*?\]', '', text)
         text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
         text = re.sub('\w*\d\w*', '', text)
         text = re.sub('[''"",,,]', '', text)
+        text = text.lower()
         text = re.sub('\n', '', text)
         text = text.split(' ')
         return text
+
+    # turn a doc into clean tokens
+    def clean_doc(self, doc):
+        # split into tokens by white space
+        tokens = doc.split()
+        # remove punctuation from each token
+        table = str.maketrans('', '', string.punctuation)
+        tokens = [w.translate(table) for w in tokens]
+        # remove remaining tokens that are not alphabetic
+        tokens = [word for word in tokens if word.isalpha()]
+        # filter out stop words
+        stop_words = set(stopwords.words('english'))
+        tokens = [w for w in tokens if not w in stop_words]
+        # filter out short tokens
+        tokens = [word for word in tokens if len(word) > 1]
+        return tokens
 
     def load_data(self, dir):
         X, y = [], []
@@ -124,7 +149,7 @@ class Dataset_Loader_IMDB(dataset):
             y_dir = os.path.join(dir, y_label)
             for f_name in os.listdir(y_dir):
                 with open(os.path.join(y_dir, f_name)) as f:
-                    x_val = self.text_clean(f.read())
+                    x_val = self.clean_doc(f.read())
                 X.append(x_val)
                 y.append(y_val)
         return X, y

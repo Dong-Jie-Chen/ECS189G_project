@@ -21,11 +21,11 @@ class Method_RNN_IMDB(method, nn.Module):
     # it defines the max rounds to train the model
     max_epoch = 50
     # it defines the learning rate for gradient descent based optimizer for model learning
-    learning_rate = 0.001
+    learning_rate = 0.0001
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 256
-    embed_dim = 100
-    h_size = 16
+    embed_dim = 500
+    h_size = 32
     n_layers = 2
     # it defines the the MLP model architecture, e.g.,
     # how many layers, size of variables in each layer, activation function, etc.
@@ -36,9 +36,11 @@ class Method_RNN_IMDB(method, nn.Module):
         #self.embedding = nn.EmbeddingBag(num_embeddings=vocab_size, embedding_dim=self.embed_dim, sparse=True)
         self.embedding = nn.Embedding(dataset.vocab_size, self.embed_dim, padding_idx=dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]).to(self.device)
         #self.rnn_1 = nn.LSTM(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
-        #self.rnn_1 = nn.RNN(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
-        self.rnn_1 = nn.GRU(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
-        self.fc = nn.Linear(self.h_size * 2, 1).to(self.device)
+        self.rnn_1 = nn.RNN(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
+        #self.rnn_1 = nn.GRU(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
+        self.fc_1 = nn.Linear(self.h_size * 2, 32).to(self.device)
+        self.fc = nn.Linear(32, 1).to(self.device)
+        self.act_1 = nn.ReLU().to(self.device)
         self.act = nn.Sigmoid().to(self.device)
         #initialize two tokens to be zero
         UNK_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.unk_token]
@@ -56,6 +58,7 @@ class Method_RNN_IMDB(method, nn.Module):
         #packed_output, (hidden, cell) = self.rnn_1(packed_embedded)  # use this line for LSTM
         packed_output, hidden = self.rnn_1(packed_embedded)  # use this line for RNN and GRU
         hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1) # comment this line if bidirection=False
+        #hidden = self.act_1(self.fc_1(hidden))
         dense_outputs = self.fc(hidden)
         outputs = self.act(dense_outputs)
         return outputs
@@ -65,7 +68,7 @@ class Method_RNN_IMDB(method, nn.Module):
 
     def train(self, dataset, X, y):
         # check here for the torch.optim doc: https://pytorch.org/docs/stable/optim.html
-        optimizer = torch.optim.Adam(self.parameters())
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         mini_batches = dataset.create_mini_batches("IMBD", self.batch_size)
         # check here for the nn.CrossEntropyLoss doc: https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
         loss_function = nn.BCELoss().to(self.device)
