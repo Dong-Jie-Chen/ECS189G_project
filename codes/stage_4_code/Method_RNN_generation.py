@@ -69,10 +69,6 @@ class Method_RNN_generation(method, nn.Module):
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
             epoch_loss = train_loss.item()
-            #epoch_loss += train_loss.item()
-            #epoch_loss = epoch_loss / self.batch_size
-            #epoch_acc = epoch_acc / len(mini_batches)
-
 
             duration = time.time() - start
             if (epoch-1)%1 == 0:
@@ -87,7 +83,7 @@ class Method_RNN_generation(method, nn.Module):
         ax1.plot(loss_hist, color=color)
         ax1.tick_params(axis='y', labelcolor=color)
         fig.tight_layout()  # otherwise the right y-label is slightly clipped
-        plt.savefig('history_IMBD.png')
+        plt.savefig('history_generation.png')
 
     def init_state(self, sequence_length):
         return (torch.zeros(self.num_layers, sequence_length, self.hidden_size).to(self.device),
@@ -102,7 +98,7 @@ class Method_RNN_generation(method, nn.Module):
             y_pred, (state_h, state_c) = self.forward(x, (state_h, state_c))
             last_word_logits = y_pred[0][-1]
             p = torch.nn.functional.softmax(last_word_logits, dim=0).detach().cpu().numpy()
-            word_index = np.random.choice(len(last_word_logits), p=p)
+            word_index = np.argmax(p)
             words.append(dataset.index_to_word[word_index])
         return words
 
