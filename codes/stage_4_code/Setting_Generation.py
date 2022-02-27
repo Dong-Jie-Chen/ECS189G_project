@@ -26,10 +26,10 @@ class Setting_Generation(setting):
 
         # run MethodModule
         self.method.data = DataLoader(self.dataset, batch_size=self.method.batch_size)
-        learned_result = self.method.run(self.dataset)
-            
+        self.method.run(self.dataset)
+
         # save raw ResultModule
-        self.result.data = learned_result
+        self.result.data = self.method
         self.result.save()
             
         #self.evaluate.data = learned_result

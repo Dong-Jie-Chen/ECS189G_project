@@ -18,7 +18,9 @@ import time
 
 class Method_RNN_generation(method, nn.Module):
     data = None
-    max_epoch = 5
+    word_to_index = None
+    index_to_word = None
+    max_epoch = 50
     learning_rate = 0.001
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 64
@@ -103,6 +105,8 @@ class Method_RNN_generation(method, nn.Module):
         return words
 
     def run(self, dataset):
+        self.word_to_index = dataset.word_to_index
+        self.index_to_word = dataset.index_to_word
         print('method running...')
         print('--start training...')
         self.train()

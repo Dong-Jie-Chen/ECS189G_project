@@ -5,6 +5,7 @@ from codes.stage_4_code.Dataset_Loader_Generation import Dataset_Loader_Generati
 from codes.stage_4_code.Method_RNN_IMDB import Method_RNN_IMDB
 from codes.stage_4_code.Method_RNN_generation import Method_RNN_generation
 from codes.stage_4_code.Result_Saver import Result_Saver
+from codes.stage_4_code.Model_Saver import Model_Saver
 from codes.stage_4_code.Setting_IMDB import Setting_IMDB
 from codes.stage_4_code.Setting_Generation import Setting_Generation
 from codes.stage_4_code.Evaluate_Accuracy import Evaluate_Accuracy
@@ -12,7 +13,7 @@ from codes.stage_4_code.Evaluate_Classification import Evaluate_Classification
 import numpy as np
 import torch
 
-task = "classification"  #"classification" "generation"
+task = "generation"  #"classification" "generation"
 # ---- CNN script ----
 if task == "classification":
     # ---- parameter section -------------------------------
@@ -67,9 +68,9 @@ elif task == "generation":
     method_obj = Method_RNN_generation('RNN', '', data_obj)
 
 
-    result_obj = Result_Saver('saver', '')
+    result_obj = Model_Saver('saver', '')
     result_obj.result_destination_folder_path = '../../result/stage_4_result/RNN_generation_'
-    result_obj.result_destination_file_name = 'prediction_result'
+    result_obj.result_destination_file_name = 'generation_model'
 
     setting_obj = Setting_Generation('train test split', '')
 
