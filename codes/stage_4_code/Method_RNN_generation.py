@@ -20,14 +20,14 @@ class Method_RNN_generation(method, nn.Module):
     data = None
     word_to_index = None
     index_to_word = None
-    max_epoch = 50
+    max_epoch = 1
     learning_rate = 0.001
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 64
-    embed_dim = 64
+    embed_dim = 500
     sequence_length = 3
-    num_layers = 3
-    hidden_size = 256
+    num_layers = 1
+    hidden_size = 512
     def __init__(self, mName, mDescription, dataset):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
@@ -47,11 +47,12 @@ class Method_RNN_generation(method, nn.Module):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         loss_function = nn.CrossEntropyLoss().to(self.device)
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
-        loss_hist = []
+        loss_hist, acc_hist = [], []
         for epoch in range(self.max_epoch):
             start = time.time()
             state_h, state_c = self.init_state(self.sequence_length)
             epoch_loss = 0
+            epoch_acc = 0
             for batch, (X, y) in enumerate(self.data):
                 optimizer.zero_grad()
                 X, y = X.to(self.device), y.to(self.device)
@@ -61,6 +62,7 @@ class Method_RNN_generation(method, nn.Module):
                 y_true = y
                 # calculate the training loss
                 train_loss = loss_function(y_pred.transpose(1, 2), y)
+
                 state_h = state_h.detach()
                 state_c = state_c.detach()
                 # check here for the loss.backward doc: https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html
@@ -70,13 +72,17 @@ class Method_RNN_generation(method, nn.Module):
                 # check here for the opti.step doc: https://pytorch.org/docs/stable/optim.html
                 # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
                 optimizer.step()
+                accuracy_evaluator.data = {'true_y': y_true[:,-1].cpu(), 'pred_y': y_pred[:,-1,:].max(1)[1].cpu()}
+                epoch_acc += accuracy_evaluator.evaluate()
             epoch_loss = train_loss.item()
+            epoch_acc = epoch_acc / (batch + 1)
 
             duration = time.time() - start
             if (epoch-1)%1 == 0:
-                print('Epoch:', epoch, 'Loss:', train_loss.item(), 'Time:', duration)
+                print('Epoch:', epoch, 'Accuracy:', epoch_acc, 'Loss:', train_loss.item(), 'Time:', duration)
             #print(epoch_loss, epoch_acc)
             loss_hist.append(epoch_loss)
+            acc_hist.append(epoch_acc)
 
         fig, ax1 = plt.subplots()
         color = 'tab:red'
@@ -84,6 +90,11 @@ class Method_RNN_generation(method, nn.Module):
         ax1.set_ylabel('loss', color=color)
         ax1.plot(loss_hist, color=color)
         ax1.tick_params(axis='y', labelcolor=color)
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        color = 'tab:blue'
+        ax2.set_ylabel('acc', color=color)  # we already handled the x-label with ax1
+        ax2.plot(acc_hist, color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
         fig.tight_layout()  # otherwise the right y-label is slightly clipped
         plt.savefig('history_generation.png')
 
@@ -100,7 +111,7 @@ class Method_RNN_generation(method, nn.Module):
             y_pred, (state_h, state_c) = self.forward(x, (state_h, state_c))
             last_word_logits = y_pred[0][-1]
             p = torch.nn.functional.softmax(last_word_logits, dim=0).detach().cpu().numpy()
-            word_index = np.argmax(p)
+            word_index = np.random.choice(len(last_word_logits), p=p)
             words.append(dataset.index_to_word[word_index])
         return words
 
@@ -111,7 +122,7 @@ class Method_RNN_generation(method, nn.Module):
         print('--start training...')
         self.train()
         print('--start testing...')
-        result = self.test(dataset, 'What did the')
+        result = self.test(dataset, 'what did the')
         print(result)
 
         return result
