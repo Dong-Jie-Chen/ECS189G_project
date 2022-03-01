@@ -13,7 +13,7 @@ from codes.stage_4_code.Evaluate_Classification import Evaluate_Classification
 import numpy as np
 import torch
 
-task = "generation"  #"classification" "generation"
+task = "classification"  #"classification" "generation"
 # ---- CNN script ----
 if task == "classification":
     # ---- parameter section -------------------------------

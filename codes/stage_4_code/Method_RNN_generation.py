@@ -20,7 +20,7 @@ class Method_RNN_generation(method, nn.Module):
     data = None
     word_to_index = None
     index_to_word = None
-    max_epoch = 1
+    max_epoch = 50
     learning_rate = 0.001
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 64
@@ -32,7 +32,7 @@ class Method_RNN_generation(method, nn.Module):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
         self.embedding = nn.Embedding(dataset.vocab_size, self.embed_dim).to(self.device)
-        self.rnn_1 = nn.LSTM(self.embed_dim, self.hidden_size, self.num_layers).to(self.device)
+        self.rnn_1 = nn.GRU(self.embed_dim, self.hidden_size, self.num_layers).to(self.device)
         self.fc = nn.Linear(self.hidden_size, dataset.vocab_size).to(self.device)
 
     def forward(self, x, pre_sentence, train_flag=True):
@@ -57,7 +57,7 @@ class Method_RNN_generation(method, nn.Module):
                 optimizer.zero_grad()
                 X, y = X.to(self.device), y.to(self.device)
                 # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
-                y_pred, (state_h, state_c) = self.forward(X, (state_h, state_c))
+                y_pred, (state_h) = self.forward(X, (state_h))
                 # convert y to torch.tensor as well
                 y_true = y
                 # calculate the training loss
@@ -103,15 +103,14 @@ class Method_RNN_generation(method, nn.Module):
                 torch.zeros(self.num_layers, sequence_length, self.hidden_size).to(self.device))
 
     def test(self, dataset, text, next_words=20):
-        # do the testing, and result the result
         words = text.split(' ')
         state_h, state_c = self.init_state(len(words))
         for i in range(0, next_words):
             x = torch.tensor([[dataset.word_to_index[w] for w in words[i:]]]).to(self.device)
-            y_pred, (state_h, state_c) = self.forward(x, (state_h, state_c))
+            y_pred, (state_h) = self.forward(x, (state_h))
             last_word_logits = y_pred[0][-1]
             p = torch.nn.functional.softmax(last_word_logits, dim=0).detach().cpu().numpy()
-            word_index = np.random.choice(len(last_word_logits), p=p)
+            word_index = np.argmax(p)
             words.append(dataset.index_to_word[word_index])
         return words
 

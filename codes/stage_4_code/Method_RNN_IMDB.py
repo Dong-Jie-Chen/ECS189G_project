@@ -25,7 +25,7 @@ class Method_RNN_IMDB(method, nn.Module):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     batch_size = 64
     embed_dim = 500
-    h_size = 32
+    h_size = 128
     n_layers = 2
     # it defines the the MLP model architecture, e.g.,
     # how many layers, size of variables in each layer, activation function, etc.
@@ -35,8 +35,8 @@ class Method_RNN_IMDB(method, nn.Module):
         nn.Module.__init__(self)
         #self.embedding = nn.EmbeddingBag(num_embeddings=vocab_size, embedding_dim=self.embed_dim, sparse=True)
         self.embedding = nn.Embedding(dataset.vocab_size, self.embed_dim, padding_idx=dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]).to(self.device)
-        #self.rnn_1 = nn.LSTM(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
-        self.rnn_1 = nn.RNN(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
+        self.rnn_1 = nn.LSTM(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
+        #self.rnn_1 = nn.RNN(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
         #self.rnn_1 = nn.GRU(input_size=self.embed_dim, hidden_size=self.h_size, num_layers=self.n_layers, bidirectional=True, dropout=0).to(self.device)
         self.fc_1 = nn.Linear(self.h_size * 2, 32).to(self.device)
         self.fc = nn.Linear(self.h_size * 2, 1).to(self.device)
@@ -55,8 +55,8 @@ class Method_RNN_IMDB(method, nn.Module):
         '''Forward propagation'''
         embedded = self.embedding(x)
         packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_length.to('cpu')).to(self.device)
-        #packed_output, (hidden, cell) = self.rnn_1(packed_embedded)  # use this line for LSTM
-        packed_output, hidden = self.rnn_1(packed_embedded)  # use this line for RNN and GRU
+        packed_output, (hidden, cell) = self.rnn_1(packed_embedded)  # use this line for LSTM
+        #packed_output, hidden = self.rnn_1(packed_embedded)  # use this line for RNN and GRU
         hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1) # comment this line if bidirection=False
         #hidden = self.act_1(self.fc_1(hidden))
         dense_outputs = self.fc(hidden)
