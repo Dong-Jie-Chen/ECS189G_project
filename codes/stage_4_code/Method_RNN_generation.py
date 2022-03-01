@@ -35,10 +35,10 @@ class Method_RNN_generation(method, nn.Module):
         self.rnn_1 = nn.GRU(self.embed_dim, self.hidden_size, self.num_layers).to(self.device)
         self.fc = nn.Linear(self.hidden_size, dataset.vocab_size).to(self.device)
 
-    def forward(self, x, pre_sentence, train_flag=True):
+    def forward(self, x, pre_h, train_flag=True):
         '''Forward propagation'''
         embedded = self.embedding(x)
-        output, state = self.rnn_1(embedded, pre_sentence)
+        output, state = self.rnn_1(embedded, pre_h)
         dense_outputs = self.fc(output)
         return dense_outputs, state
 
@@ -50,21 +50,21 @@ class Method_RNN_generation(method, nn.Module):
         loss_hist, acc_hist = [], []
         for epoch in range(self.max_epoch):
             start = time.time()
-            state_h, state_c = self.init_state(self.sequence_length)
+            hidden, cell = self.init_state(self.sequence_length)
             epoch_loss = 0
             epoch_acc = 0
             for batch, (X, y) in enumerate(self.data):
                 optimizer.zero_grad()
                 X, y = X.to(self.device), y.to(self.device)
                 # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
-                y_pred, (state_h) = self.forward(X, (state_h))
+                y_pred, (hidden) = self.forward(X, (hidden))
                 # convert y to torch.tensor as well
                 y_true = y
                 # calculate the training loss
                 train_loss = loss_function(y_pred.transpose(1, 2), y)
 
-                state_h = state_h.detach()
-                state_c = state_c.detach()
+                hidden = hidden.detach()
+                cell = cell.detach()
                 # check here for the loss.backward doc: https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html
                 # do the error backpropagation to calculate the gradients
                 train_loss.backward()
@@ -104,10 +104,10 @@ class Method_RNN_generation(method, nn.Module):
 
     def test(self, dataset, text, next_words=20):
         words = text.split(' ')
-        state_h, state_c = self.init_state(len(words))
+        hidden, cell = self.init_state(len(words))
         for i in range(0, next_words):
             x = torch.tensor([[dataset.word_to_index[w] for w in words[i:]]]).to(self.device)
-            y_pred, (state_h) = self.forward(x, (state_h))
+            y_pred, (hidden) = self.forward(x, (hidden))
             last_word_logits = y_pred[0][-1]
             p = torch.nn.functional.softmax(last_word_logits, dim=0).detach().cpu().numpy()
             word_index = np.argmax(p)
