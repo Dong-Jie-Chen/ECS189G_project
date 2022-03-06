@@ -25,14 +25,14 @@ class Method_GNN(method, nn.Module):
     def __init__(self, mName, mDescription):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
-        self.conv1 = GCNConv(self.num_features, self.hidden_channels)
-        self.conv2 = GCNConv(self.hidden_channels, self.num_classes)
+        self.conv1 = GCNConv(self.num_features, self.hidden_channels).to(self.device)
+        self.conv2 = GCNConv(self.hidden_channels, self.num_classes).to(self.device)
 
     def forward(self, x, edge_index):
         '''Forward propagation'''
         x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = nn.Dropout(0.5)(x)
+        x = x.relu().to(self.device)
+        x = nn.Dropout(0.5).to(self.device)(x)
         x = self.conv2(x, edge_index)
         return x
 
@@ -45,7 +45,7 @@ class Method_GNN(method, nn.Module):
         for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
             optimizer.zero_grad()
             # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
-            y_pred = self.forward(X, self.data['graph']['edge'])[self.data['train_test_val']['idx_train']]
+            y_pred = self.forward(X.to(self.device), self.data['graph']['edge'].to(self.device))[self.data['train_test_val']['idx_train']]
             # convert y to torch.tensor as well
             y_true = y[self.data['train_test_val']['idx_train']]
             # calculate the training loss
@@ -61,7 +61,7 @@ class Method_GNN(method, nn.Module):
 
     def test(self, X):
         # do the testing, and result the result
-        y_pred = self.forward(torch.FloatTensor(np.array(X)).to(self.device), self.data['graph']['edge'])[self.data['train_test_val']['idx_test']]
+        y_pred = self.forward(torch.FloatTensor(np.array(X)).to(self.device), self.data['graph']['edge'].to(self.device))[self.data['train_test_val']['idx_test']]
         # convert the probability distributions to the corresponding labels
         # instances will get the labels corresponding to the largest probability
         return y_pred.max(1)[1]
