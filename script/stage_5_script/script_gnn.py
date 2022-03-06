@@ -9,7 +9,7 @@ from codes.stage_3_code.Evaluate_Classification import Evaluate_Classification
 import numpy as np
 import torch
 
-dataset = "pubmed"  #"cora" "citeseer" "pubmed"
+dataset = "cora"  #"cora" "citeseer" "pubmed"
 # ---- CNN script ----
 if 1:
     # ---- parameter section -------------------------------

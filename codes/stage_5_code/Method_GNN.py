@@ -11,16 +11,18 @@ import torch
 from torch import nn
 import numpy as np
 from torch_geometric.nn import GCNConv
+import matplotlib.pyplot as plt
+import copy
 
 
 
 class Method_GNN(method, nn.Module):
     data = None
-    max_epoch = 200
-    learning_rate = 1e-3
+    max_epoch = 100
+    learning_rate = 1e-2
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     num_features = 0
-    hidden_channels = 128
+    hidden_channels = 256
     num_classes = 0
     def __init__(self, mName, mDescription):
         method.__init__(self, mName, mDescription)
@@ -37,15 +39,23 @@ class Method_GNN(method, nn.Module):
         return x
 
     def train(self, X, y):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=5e-4)
         loss_function = nn.CrossEntropyLoss().to(self.device)
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
         X = torch.FloatTensor(np.array(X)).to(self.device)
         y = torch.LongTensor(np.array(y)).to(self.device)
+        train_acc_hist = []
+        train_loss_hist = []
+        val_acc_hist = []
+        val_loss_hist = []
+        best_model = None
+        best_val_loss = 100
         for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
             optimizer.zero_grad()
             # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
             y_pred = self.forward(X.to(self.device), self.data['graph']['edge'].to(self.device))[self.data['train_test_val']['idx_train']]
+            y_pred_val = self.forward(X.to(self.device), self.data['graph']['edge'].to(self.device))[
+                self.data['train_test_val']['idx_val']]
             # convert y to torch.tensor as well
             y_true = y[self.data['train_test_val']['idx_train']]
             # calculate the training loss
@@ -55,9 +65,43 @@ class Method_GNN(method, nn.Module):
             # update the variables according to the optimizer and the gradients calculated by the above loss.backward function
             optimizer.step()
 
-            if epoch%50 == 0:
-                accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
-                print('Epoch:', epoch, 'Accuracy:', accuracy_evaluator.evaluate(), 'Loss:', train_loss.item())
+            accuracy_evaluator.data = {'true_y': y[self.data['train_test_val']['idx_val']].cpu(), 'pred_y': y_pred_val.max(1)[1].cpu()}
+            val_acc = accuracy_evaluator.evaluate()
+            val_loss = train_loss.item()
+            val_acc_hist.append(val_acc)
+            val_loss_hist.append(train_loss.item())
+
+            if val_loss < best_val_loss:
+                best_model = copy.deepcopy(self.state_dict())
+                best_val_loss = val_loss
+                best_epoch = epoch
+
+            accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
+            epoch_acc = accuracy_evaluator.evaluate()
+            train_acc_hist.append(epoch_acc)
+            train_loss_hist.append(train_loss.item())
+            if epoch%20 == 0:
+                print('Epoch:', epoch, 'Accuracy:', epoch_acc, 'Loss:', train_loss.item())
+        self.load_state_dict(best_model)
+        print("Best epoch:", best_epoch)
+        self.plot_hist(train_loss_hist, train_acc_hist, "GNN_train.png")
+        self.plot_hist(val_loss_hist, val_acc_hist, "GNN_val.png")
+
+
+    def plot_hist(self, loss_hist, acc_hist, file_name):
+        fig, ax1 = plt.subplots()
+        color = 'tab:red'
+        ax1.set_xlabel('epoch')
+        ax1.set_ylabel('loss', color=color)
+        ax1.plot(loss_hist, color=color)
+        ax1.tick_params(axis='y', labelcolor=color)
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        color = 'tab:blue'
+        ax2.set_ylabel('acc', color=color)  # we already handled the x-label with ax1
+        ax2.plot(acc_hist, color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
+        fig.tight_layout()  # otherwise the right y-label is slightly clipped
+        plt.savefig(file_name)
 
     def test(self, X):
         # do the testing, and result the result

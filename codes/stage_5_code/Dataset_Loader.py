@@ -9,6 +9,7 @@ from codes.base_class.dataset import dataset
 import torch
 import numpy as np
 import scipy.sparse as sp
+from sklearn.model_selection import train_test_split
 
 class Dataset_Loader(dataset):
     data = None
@@ -68,17 +69,14 @@ class Dataset_Loader(dataset):
         # the following part, you can either put them into the setting class or you can leave them in the dataset loader
         # the following train, test, val index are just examples, sample the train, test according to project requirements
         if self.dataset_name == 'cora':
-            idx_train = range(200)
-            idx_test = range(200, 1200)
-            idx_val = range(1200, 1500)
+            idx_train, idx_test = train_test_split(range(features.shape[0]), test_size=1400, random_state=42)
+            idx_train, idx_val = train_test_split(idx_train, train_size=140, random_state=42)
         elif self.dataset_name == 'citeseer':
-            idx_train = range(120)
-            idx_test = range(200, 1200)
-            idx_val = range(1200, 1500)
+            idx_train, idx_test = train_test_split(range(features.shape[0]), test_size=1200, random_state=42)
+            idx_train, idx_val = train_test_split(idx_train, train_size=120, random_state=42)
         elif self.dataset_name == 'pubmed':
-            idx_train = range(60)
-            idx_test = range(6300, 7300)
-            idx_val = range(6000, 6300)
+            idx_train, idx_test = train_test_split(range(features.shape[0]), test_size=600, random_state=42)
+            idx_train, idx_val = train_test_split(idx_train, train_size=60, random_state=42)
         #---- cora-small is a toy dataset I hand crafted for debugging purposes ---
         elif self.dataset_name == 'cora-small':
             idx_train = range(5)
