@@ -10,6 +10,7 @@ import torch
 import numpy as np
 import scipy.sparse as sp
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedShuffleSplit
 
 class Dataset_Loader(dataset):
     data = None
@@ -36,7 +37,7 @@ class Dataset_Loader(dataset):
         return torch.sparse.FloatTensor(indices, values, shape)
 
     def encode_onehot(self, labels):
-        classes = set(labels)
+        classes = sorted(set(labels))
         classes_dict = {c: np.identity(len(classes))[i, :] for i, c in enumerate(classes)}
         onehot_labels = np.array(list(map(classes_dict.get, labels)), dtype=np.int32)
         return onehot_labels
@@ -69,14 +70,19 @@ class Dataset_Loader(dataset):
         # the following part, you can either put them into the setting class or you can leave them in the dataset loader
         # the following train, test, val index are just examples, sample the train, test according to project requirements
         if self.dataset_name == 'cora':
-            idx_train, idx_test = train_test_split(range(features.shape[0]), test_size=1400, random_state=42)
-            idx_train, idx_val = train_test_split(idx_train, train_size=140, random_state=42)
+            idx_train, idx_test = self.balanced_split(list(labels.numpy()), train_size=140)
+            idx_val, idx_test = train_test_split(idx_test, test_size=1400, random_state=42)
+            #idx_train = range(140)
+            ##idx_val = range(200, 500)
+            #idx_test = range(500, 1500)
         elif self.dataset_name == 'citeseer':
-            idx_train, idx_test = train_test_split(range(features.shape[0]), test_size=1200, random_state=42)
-            idx_train, idx_val = train_test_split(idx_train, train_size=120, random_state=42)
+            idx_train, idx_test = self.balanced_split(list(labels.numpy()), train_size=120)
+            idx_val, idx_test = train_test_split(idx_test, test_size=1200, random_state=42)
+            #idx_train, idx_test = train_test_split(range(features.shape[0]), train_size=120, random_state=42)
+            #idx_val, idx_test = train_test_split(idx_test, test_size=1400, random_state=42)
         elif self.dataset_name == 'pubmed':
-            idx_train, idx_test = train_test_split(range(features.shape[0]), test_size=600, random_state=42)
-            idx_train, idx_val = train_test_split(idx_train, train_size=60, random_state=42)
+            idx_train, idx_test = train_test_split(range(features.shape[0]), train_size=60, random_state=42)
+            idx_val, idx_test = train_test_split(idx_test, test_size=600, random_state=42)
         #---- cora-small is a toy dataset I hand crafted for debugging purposes ---
         elif self.dataset_name == 'cora-small':
             idx_train = range(5)
@@ -98,3 +104,21 @@ class Dataset_Loader(dataset):
         train_test_val = {'idx_train': idx_train, 'idx_test': idx_test, 'idx_val': idx_val}
         graph = {'node': idx_map, 'edge': edges, 'X': features, 'y': labels, 'utility': {'A': adj, 'reverse_idx': reverse_idx_map}}
         return {'graph': graph, 'train_test_val': train_test_val}
+
+    def balanced_split(self, y, train_size):
+
+        def split_class(y, label, train_size):
+            indices = np.flatnonzero(y == label)
+            n_train = train_size // (max(y) + 1)
+            idx_train, idx_test = train_test_split(range(indices.shape[0]), train_size=n_train, random_state=42)
+            train_index = indices[idx_train]
+            test_index = indices[idx_test]
+            return (train_index, test_index)
+
+        idx = [split_class(y, label, train_size) for label in np.unique(y)]
+        train_index = np.concatenate([train for train, _ in idx])
+        test_index = np.concatenate([test for _, test in idx])
+        return train_index, test_index
+
+
+

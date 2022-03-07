@@ -8,6 +8,7 @@ Concrete SettingModule class for a specific experimental SettingModule
 from codes.base_class.setting import setting
 from sklearn.model_selection import train_test_split
 import numpy as np
+from collections import Counter
 
 class Setting_Train_Test_Split(setting):
 
@@ -28,8 +29,11 @@ class Setting_Train_Test_Split(setting):
         X_test, y_test = loaded_data['graph']['X'][loaded_data['train_test_val']['idx_test']], \
                            loaded_data['graph']['y'][loaded_data['train_test_val']['idx_test']]
 
+        print(Counter(np.array(loaded_data['graph']['y'])))
         print("Training set:", np.array(X_train).shape, np.array(y_train).max())
+        print(Counter(np.array(y_train)))
         print("Testing set:", np.array(X_test).shape, np.array(y_test).max())
+        print(Counter(np.array(y_test)))
 
         self.method.num_features = np.array(X_train).shape[1]
         self.method.num_classes = np.array(y_train).max() + 1

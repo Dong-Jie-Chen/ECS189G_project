@@ -13,22 +13,23 @@ import numpy as np
 from torch_geometric.nn import GCNConv
 import matplotlib.pyplot as plt
 import copy
-
-
+from torch.nn.parameter import Parameter
+from torch.nn.modules.module import Module
 
 class Method_GNN(method, nn.Module):
     data = None
-    max_epoch = 100
-    learning_rate = 1e-2
+    max_epoch = 200
+    learning_rate = 0.01
+    weight_decay = 5e-4
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     num_features = 0
-    hidden_channels = 256
+    hidden_channels = 128
     num_classes = 0
     def __init__(self, mName, mDescription):
         method.__init__(self, mName, mDescription)
         nn.Module.__init__(self)
-        self.conv1 = GCNConv(self.num_features, self.hidden_channels).to(self.device)
-        self.conv2 = GCNConv(self.hidden_channels, self.num_classes).to(self.device)
+        self.conv1 = GraphConvolution(self.num_features, self.hidden_channels).to(self.device)
+        self.conv2 = GraphConvolution(self.hidden_channels, self.num_classes).to(self.device)
 
     def forward(self, x, edge_index):
         '''Forward propagation'''
@@ -39,7 +40,7 @@ class Method_GNN(method, nn.Module):
         return x
 
     def train(self, X, y):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=5e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
         loss_function = nn.CrossEntropyLoss().to(self.device)
         accuracy_evaluator = Evaluate_Accuracy('training evaluator', '')
         X = torch.FloatTensor(np.array(X)).to(self.device)
@@ -48,14 +49,17 @@ class Method_GNN(method, nn.Module):
         train_loss_hist = []
         val_acc_hist = []
         val_loss_hist = []
+        test_acc_hist = []
         best_model = None
-        best_val_loss = 100
+        best_val_acc = 0
         for epoch in range(self.max_epoch): # you can do an early stop if self.max_epoch is too much...
             optimizer.zero_grad()
             # get the output, we need to covert X into torch.tensor so pytorch algorithm can operate on it
-            y_pred = self.forward(X.to(self.device), self.data['graph']['edge'].to(self.device))[self.data['train_test_val']['idx_train']]
-            y_pred_val = self.forward(X.to(self.device), self.data['graph']['edge'].to(self.device))[
+            y_pred = self.forward(X.to(self.device), self.data['graph']['utility']['A'].to(self.device))[self.data['train_test_val']['idx_train']]
+            y_pred_val = self.forward(X.to(self.device), self.data['graph']['utility']['A'].to(self.device))[
                 self.data['train_test_val']['idx_val']]
+            y_pred_test = self.forward(X.to(self.device), self.data['graph']['utility']['A'].to(self.device))[
+                self.data['train_test_val']['idx_test']]
             # convert y to torch.tensor as well
             y_true = y[self.data['train_test_val']['idx_train']]
             # calculate the training loss
@@ -67,13 +71,17 @@ class Method_GNN(method, nn.Module):
 
             accuracy_evaluator.data = {'true_y': y[self.data['train_test_val']['idx_val']].cpu(), 'pred_y': y_pred_val.max(1)[1].cpu()}
             val_acc = accuracy_evaluator.evaluate()
-            val_loss = train_loss.item()
             val_acc_hist.append(val_acc)
             val_loss_hist.append(train_loss.item())
 
-            if val_loss < best_val_loss:
+            accuracy_evaluator.data = {'true_y': y[self.data['train_test_val']['idx_test']].cpu(),
+                                       'pred_y': y_pred_test.max(1)[1].cpu()}
+            test_acc = accuracy_evaluator.evaluate()
+            test_acc_hist.append(test_acc)
+
+            if val_acc > best_val_acc:
                 best_model = copy.deepcopy(self.state_dict())
-                best_val_loss = val_loss
+                best_val_acc = val_acc
                 best_epoch = epoch
 
             accuracy_evaluator.data = {'true_y': y_true.cpu(), 'pred_y': y_pred.max(1)[1].cpu()}
@@ -86,6 +94,7 @@ class Method_GNN(method, nn.Module):
         print("Best epoch:", best_epoch)
         self.plot_hist(train_loss_hist, train_acc_hist, "GNN_train.png")
         self.plot_hist(val_loss_hist, val_acc_hist, "GNN_val.png")
+        self.plot_hist([], test_acc_hist, "GNN_test.png")
 
 
     def plot_hist(self, loss_hist, acc_hist, file_name):
@@ -105,7 +114,7 @@ class Method_GNN(method, nn.Module):
 
     def test(self, X):
         # do the testing, and result the result
-        y_pred = self.forward(torch.FloatTensor(np.array(X)).to(self.device), self.data['graph']['edge'].to(self.device))[self.data['train_test_val']['idx_test']]
+        y_pred = self.forward(torch.FloatTensor(np.array(X)).to(self.device), self.data['graph']['utility']['A'].to(self.device))[self.data['train_test_val']['idx_test']]
         # convert the probability distributions to the corresponding labels
         # instances will get the labels corresponding to the largest probability
         return y_pred.max(1)[1]
@@ -118,4 +127,23 @@ class Method_GNN(method, nn.Module):
         print('--start testing...')
         pred_y = self.test(self.data['graph']['X'])
         return {'pred_y': pred_y.cpu(), 'true_y': self.data['graph']['y'][self.data['train_test_val']['idx_test']]}
+
+class GraphConvolution(Module):
+    def __init__(self, in_features, out_hidden, bias=True):
+        super(GraphConvolution, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_hidden
+        self.weight = Parameter(torch.zeros(in_features, out_hidden))
+        if bias:
+            self.bias = Parameter(torch.ones(out_hidden))
+        else:
+            self.register_parameter('bias', None)
+
+    def forward(self, input, adj_m):
+        support = torch.mm(input, self.weight)
+        output = torch.spmm(adj_m, support)
+        if self.bias is not None:
+            return output + self.bias
+        else:
+            return output
             

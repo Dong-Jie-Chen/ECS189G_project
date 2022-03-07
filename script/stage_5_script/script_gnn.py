@@ -5,7 +5,6 @@ from codes.stage_5_code.Method_GNN import Method_GNN
 from codes.stage_5_code.Result_Saver import Result_Saver
 from codes.stage_5_code.Setting_Train_Test_Split import Setting_Train_Test_Split
 from codes.stage_5_code.Evaluate_Accuracy import Evaluate_Accuracy
-from codes.stage_3_code.Evaluate_Classification import Evaluate_Classification
 import numpy as np
 import torch
 
