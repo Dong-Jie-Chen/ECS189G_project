@@ -70,19 +70,14 @@ class Dataset_Loader(dataset):
         # the following part, you can either put them into the setting class or you can leave them in the dataset loader
         # the following train, test, val index are just examples, sample the train, test according to project requirements
         if self.dataset_name == 'cora':
-            idx_train, idx_test = self.balanced_split(list(labels.numpy()), train_size=140)
-            idx_val, idx_test = train_test_split(idx_test, test_size=1400, random_state=42)
-            #idx_train = range(140)
-            ##idx_val = range(200, 500)
-            #idx_test = range(500, 1500)
+            idx_train, idx_val, idx_test = self.balanced_split(list(labels.numpy()), train_size=140, test_size=1050)
+
         elif self.dataset_name == 'citeseer':
-            idx_train, idx_test = self.balanced_split(list(labels.numpy()), train_size=120)
-            idx_val, idx_test = train_test_split(idx_test, test_size=1200, random_state=42)
-            #idx_train, idx_test = train_test_split(range(features.shape[0]), train_size=120, random_state=42)
-            #idx_val, idx_test = train_test_split(idx_test, test_size=1400, random_state=42)
+            idx_train, idx_val, idx_test = self.balanced_split(list(labels.numpy()), train_size=120, test_size=1200)
+
         elif self.dataset_name == 'pubmed':
-            idx_train, idx_test = train_test_split(range(features.shape[0]), train_size=60, random_state=42)
-            idx_val, idx_test = train_test_split(idx_test, test_size=600, random_state=42)
+            idx_train, idx_val, idx_test = self.balanced_split(list(labels.numpy()), train_size=60, test_size=600)
+
         #---- cora-small is a toy dataset I hand crafted for debugging purposes ---
         elif self.dataset_name == 'cora-small':
             idx_train = range(5)
@@ -105,20 +100,24 @@ class Dataset_Loader(dataset):
         graph = {'node': idx_map, 'edge': edges, 'X': features, 'y': labels, 'utility': {'A': adj, 'reverse_idx': reverse_idx_map}}
         return {'graph': graph, 'train_test_val': train_test_val}
 
-    def balanced_split(self, y, train_size):
+    def balanced_split(self, y, train_size, test_size):
 
-        def split_class(y, label, train_size):
+        def split_class(y, label, train_size, test_size):
             indices = np.flatnonzero(y == label)
             n_train = train_size // (max(y) + 1)
+            n_test = test_size // (max(y) + 1)
             idx_train, idx_test = train_test_split(range(indices.shape[0]), train_size=n_train, random_state=42)
+            idx_val, idx_test = train_test_split(idx_test, test_size=n_test, random_state=42)
             train_index = indices[idx_train]
+            val_index = indices[idx_val]
             test_index = indices[idx_test]
-            return (train_index, test_index)
+            return (train_index, val_index, test_index)
 
-        idx = [split_class(y, label, train_size) for label in np.unique(y)]
-        train_index = np.concatenate([train for train, _ in idx])
-        test_index = np.concatenate([test for _, test in idx])
-        return train_index, test_index
+        idx = [split_class(y, label, train_size, test_size) for label in np.unique(y)]
+        train_index = np.concatenate([train for train, _, _ in idx])
+        val_index = np.concatenate([val for _, val, _ in idx])
+        test_index = np.concatenate([test for _, _, test in idx])
+        return train_index, val_index, test_index
 
 
 

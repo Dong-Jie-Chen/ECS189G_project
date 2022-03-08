@@ -10,7 +10,7 @@ from codes.stage_5_code.Evaluate_Accuracy import Evaluate_Accuracy
 import torch
 from torch import nn
 import numpy as np
-from torch_geometric.nn import GCNConv
+#from torch_geometric.nn import GCNConv
 import matplotlib.pyplot as plt
 import copy
 from torch.nn.parameter import Parameter
