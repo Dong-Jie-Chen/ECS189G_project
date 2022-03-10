@@ -30,11 +30,12 @@ class Method_GNN(method, nn.Module):
         nn.Module.__init__(self)
         self.conv1 = GraphConvolution(self.num_features, self.hidden_channels).to(self.device)
         self.conv2 = GraphConvolution(self.hidden_channels, self.num_classes).to(self.device)
+        self.conv3 = GraphConvolution(self.hidden_channels, self.num_classes).to(self.device)
 
     def forward(self, x, edge_index):
         '''Forward propagation'''
         x = self.conv1(x, edge_index)
-        x = x.relu().to(self.device)
+        x = nn.ReLU().to(self.device)(x)
         x = nn.Dropout(0.5).to(self.device)(x)
         x = self.conv2(x, edge_index)
         return x
